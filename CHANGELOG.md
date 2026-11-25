@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1] - 2026-11-25
+
 ### Changed
 
 - Complete visual overhaul across every screen: a dark-fantasy design system
@@ -27,6 +29,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Release signing from the shared Android key (`keystore.properties` locally,
   repository secrets in CI) and a tag-driven workflow that builds and attaches
   the versioned APK to each GitHub release.
+
+### Performance
+
+- Slimmer release APK: R8 minification and resource shrinking are enabled, and
+  emulator-only x86/x86_64 MediaPipe libraries are no longer shipped, so the
+  download is roughly a third of its previous size.
+- Removed the four tab icons left over from the old navigation.
 
 ## [1.0] - 2026-11-25
 

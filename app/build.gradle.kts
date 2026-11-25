@@ -27,8 +27,8 @@ android {
         applicationId = "com.fitnex.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "1.1"
         vectorDrawables { useSupportLibrary = true }
     }
 
@@ -55,7 +55,13 @@ android {
             isMinifyEnabled = false
         }
         release {
-            isMinifyEnabled = false
+            // Ship only what a phone can run: MediaPipe's x86/x86_64 native
+            // libraries are emulator-only and cost ~27 MB of the APK.
+            ndk {
+                abiFilters += listOf("arm64-v8a", "armeabi-v7a")
+            }
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
