@@ -14,6 +14,7 @@ Grab the newest APK from the [Releases page](https://github.com/AceIsHopeless/Fi
 
 | Release | APK |
 | --- | --- |
+| FitNEX 1.1 | `FitNEX-1.1.apk` |
 | FitNEX 1.0 | `FitNEX-1.0.apk` |
 
 Every version gets its own release and its own APK file named after the version,
