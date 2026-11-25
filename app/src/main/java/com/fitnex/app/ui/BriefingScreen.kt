@@ -1,10 +1,8 @@
 package com.fitnex.app.ui
 
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -14,156 +12,180 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.fitnex.app.domain.BossCatalog
 import com.fitnex.app.domain.PlayerState
 import com.fitnex.app.ui.components.BossArt
-import com.fitnex.app.ui.theme.Ash
+import com.fitnex.app.ui.components.Eyebrow
+import com.fitnex.app.ui.components.FitIcon
+import com.fitnex.app.ui.components.HairlineRule
+import com.fitnex.app.ui.components.Metrics
+import com.fitnex.app.ui.components.PrimaryAction
+import com.fitnex.app.ui.components.SectionHeader
+import com.fitnex.app.ui.components.StatStrip
+import com.fitnex.app.ui.components.Tag
 import com.fitnex.app.ui.theme.Bone
-import com.fitnex.app.ui.theme.Charcoal
-import com.fitnex.app.ui.theme.EmberRed
-import com.fitnex.app.ui.theme.Line
-import com.fitnex.app.ui.theme.Muted
+import com.fitnex.app.ui.theme.Ember
+import com.fitnex.app.ui.theme.Fog
+import com.fitnex.app.ui.theme.FogDim
+import com.fitnex.app.ui.theme.Gold
+import com.fitnex.app.ui.theme.Hairline
 
 @Composable
 fun BriefingScreen(state: PlayerState, onStartBattle: () -> Unit) {
     val boss = state.currentBoss
-    var visible by remember(boss.id) { mutableStateOf(false) }
-    val artAlpha by animateFloatAsState(
-        targetValue = if (visible) 1f else 0f,
-        animationSpec = tween(durationMillis = 420),
-        label = "bossArtReveal",
-    )
-    LaunchedEffect(boss.id) { visible = true }
+    val index = BossCatalog.indexOf(boss) + 1
+    val total = BossCatalog.all.size
+    val alreadySlain = boss.id in state.defeatedBossIds
 
     LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Ash)
-            .statusBarsPadding(),
-        contentPadding = PaddingValues(start = 22.dp, end = 22.dp, top = 18.dp, bottom = 28.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(
+            start = Metrics.Gutter,
+            end = Metrics.Gutter,
+            top = 10.dp,
+            bottom = Metrics.BottomBreathing,
+        ),
+        verticalArrangement = Arrangement.spacedBy(24.dp),
     ) {
         item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Text("TARGET", style = MaterialTheme.typography.labelMedium, color = Muted)
-                Text(
-                    (BossCatalog.indexOf(boss) + 1).toString().padStart(2, '0') + " / " +
-                        BossCatalog.all.size.toString().padStart(2, '0'),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = if (boss.isFinal) EmberRed else Muted,
+            Column {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Eyebrow("Briefing", color = Fog)
+                    Eyebrow(
+                        "${index.toString().padStart(2, '0')} / ${total.toString().padStart(2, '0')}",
+                        color = if (boss.isFinal) Ember else FogDim,
+                    )
+                }
+                Spacer(Modifier.height(14.dp))
+                HairlineRule()
+            }
+        }
+
+        item {
+            Box {
+                BossArt(bossId = boss.id, height = 300.dp)
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .fillMaxWidth()
+                        .padding(horizontal = 18.dp, vertical = 18.dp),
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Tag(
+                            text = if (boss.isFinal) "Final gate" else "Tier ${index.toString().padStart(2, '0')}",
+                            color = if (boss.isFinal) Ember else Bone.copy(alpha = 0.5f),
+                            filled = boss.isFinal,
+                        )
+                        if (alreadySlain) {
+                            Spacer(Modifier.width(8.dp))
+                            Tag(text = "Slain before", color = Gold)
+                        }
+                    }
+                    Spacer(Modifier.height(12.dp))
+                    Text(boss.name, style = MaterialTheme.typography.displayLarge, color = Bone)
+                }
+            }
+        }
+
+        item {
+            Row(Modifier.fillMaxWidth()) {
+                Box(
+                    Modifier
+                        .padding(top = 2.dp)
+                        .width(2.dp)
+                        .height(46.dp)
+                        .background(Ember),
                 )
-            }
-        }
-
-        item { BossArt(bossId = boss.id, height = 262.dp, modifier = Modifier.alpha(artAlpha)) }
-
-        item {
-            Text(boss.name, style = MaterialTheme.typography.displayLarge, color = Bone)
-            Spacer(Modifier.height(6.dp))
-            Text(boss.lore, style = MaterialTheme.typography.bodyMedium, color = Muted)
-        }
-
-        item {
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                BriefingStat("HP", boss.hp.toString(), Modifier.weight(1f))
-                BriefingStat("TIME", formatClock(boss.timeLimitSeconds), Modifier.weight(1f))
-                BriefingStat("PER REP", "2", Modifier.weight(1f))
-            }
-        }
-
-        item {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Charcoal, RoundedCornerShape(3.dp))
-                    .border(1.dp, Line, RoundedCornerShape(3.dp))
-                    .padding(18.dp),
-            ) {
-                Text("POSITIONING", style = MaterialTheme.typography.labelSmall, color = Muted)
-                Spacer(Modifier.height(12.dp))
-                Rule("01", "Set the phone on the floor, screen up, angled at your shoulders.")
-                Rule("02", "Keep your whole torso and both hands inside the frame.")
-                Rule("03", "Full lockout at the top, chest low at the bottom. Partial reps do not count.")
+                Spacer(Modifier.width(14.dp))
+                Text(
+                    boss.lore,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = Fog,
+                )
             }
         }
 
         item {
             Column {
-                Button(
-                    onClick = onStartBattle,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(56.dp),
-                    shape = RoundedCornerShape(3.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = EmberRed,
-                        contentColor = Color.White,
+                SectionHeader("Vitals")
+                Spacer(Modifier.height(18.dp))
+                StatStrip(
+                    items = listOf(
+                        Triple("Health", boss.hp.toString(), Bone),
+                        Triple("Time limit", formatClock(boss.timeLimitSeconds), Bone),
+                        Triple("Per rep", "2", Ember),
                     ),
-                ) {
+                )
+            }
+        }
+
+        item {
+            Column {
+                SectionHeader("Rules of engagement")
+                Spacer(Modifier.height(16.dp))
+                Rule("01", "Set the phone on the floor, screen up, angled at your shoulders.")
+                HairlinePair()
+                Rule("02", "Keep your whole torso and both hands inside the frame.")
+                HairlinePair()
+                Rule("03", "Full lockout up top, chest low at the bottom. Partial reps do not count.")
+                HairlinePair()
+                Rule("04", "One extra minute is offered once if the clock runs out.")
+            }
+        }
+
+        item {
+            Column {
+                PrimaryAction(
+                    text = if (alreadySlain) "Face it again" else "Begin the hunt",
+                    onClick = onStartBattle,
+                    icon = FitIcon.Swords,
+                )
+                Spacer(Modifier.height(12.dp))
+                Row(verticalAlignment = Alignment.Top) {
+                    FitIcon(FitIcon.Spark, tint = FogDim, iconSize = 13.dp)
+                    Spacer(Modifier.width(8.dp))
                     Text(
-                        "START BATTLE",
-                        style = MaterialTheme.typography.labelMedium,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 2.sp,
+                        if (alreadySlain) {
+                            "Victory still counts for the record, but its title is already yours."
+                        } else {
+                            "Slay ${boss.name} to gain a level and claim its title."
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = FogDim,
                     )
                 }
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    "Defeat ${boss.name} and you gain one level and a title.",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Muted,
-                )
             }
         }
     }
 }
 
 @Composable
-private fun BriefingStat(label: String, value: String, modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier
-            .background(Charcoal, RoundedCornerShape(3.dp))
-            .border(1.dp, Line, RoundedCornerShape(3.dp))
-            .padding(vertical = 14.dp, horizontal = 16.dp),
-    ) {
-        Text(label, style = MaterialTheme.typography.labelSmall, color = Muted)
-        Spacer(Modifier.height(6.dp))
-        Text(value, style = MaterialTheme.typography.headlineMedium, color = Bone)
+private fun Rule(number: String, text: String) {
+    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 14.dp)) {
+        Text(
+            number,
+            style = MaterialTheme.typography.labelSmall,
+            color = Ember,
+            modifier = Modifier.padding(top = 2.dp),
+        )
+        Spacer(Modifier.width(16.dp))
+        Text(text, style = MaterialTheme.typography.bodyMedium, color = Bone)
     }
 }
 
 @Composable
-private fun Rule(number: String, text: String) {
-    Row(verticalAlignment = Alignment.Top) {
-        Text(number, style = MaterialTheme.typography.labelSmall, color = EmberRed)
-        Spacer(Modifier.padding(start = 10.dp))
-        Text(
-            text,
-            style = MaterialTheme.typography.bodyMedium,
-            color = Bone,
-            modifier = Modifier.padding(bottom = 10.dp),
-        )
-    }
+private fun HairlinePair() {
+    HairlineRule(color = Hairline.copy(alpha = 0.6f))
 }

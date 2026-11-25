@@ -6,6 +6,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Complete visual overhaul across every screen: a dark-fantasy design system
+  (Cinzel display type, Inter interface type, ember/gold palette, custom drawn
+  icon set) replaces the previous flat panels.
+- Home now leads with hero progression: a ticked rank medallion, rank rail and
+  lifetime record, followed by a full-bleed campaign plate with the current
+  boss's vitals and a single primary action.
+- Battle is now a HUD: time rail, segmented boss health, framed viewfinder,
+  live tracking strip and an animated rep counter with damage feedback.
+- Briefing, result, stats and profile rebuilt as intentional layouts — ruled
+  ledgers, a seven-day rep chart, campaign medals and equipped-title states —
+  instead of repeated cards.
+- Navigation moved to a floating dock with directional screen transitions;
+  the app shell owns the status-bar inset so content never collides with it.
+
+### Added
+
+- Release signing from the shared Android key (`keystore.properties` locally,
+  repository secrets in CI) and a tag-driven workflow that builds and attaches
+  the versioned APK to each GitHub release.
+
 ## [1.0] - 2026-11-25
 
 First public release.

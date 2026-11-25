@@ -16,7 +16,9 @@ import androidx.camera.core.resolutionselector.ResolutionStrategy
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -34,7 +36,6 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -48,13 +49,17 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.window.Dialog
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -64,15 +69,25 @@ import com.fitnex.app.camera.PushUpAnalyzer
 import com.fitnex.app.data.CameraFacing
 import com.fitnex.app.domain.BattleStatus
 import com.fitnex.app.domain.PushUpCounter
+import com.fitnex.app.ui.components.Eyebrow
+import com.fitnex.app.ui.components.FitIcon
 import com.fitnex.app.ui.components.HealthBar
+import com.fitnex.app.ui.components.IconPlate
+import com.fitnex.app.ui.components.PrimaryAction
+import com.fitnex.app.ui.components.ProgressRail
+import com.fitnex.app.ui.components.Tag
 import com.fitnex.app.ui.feedback.GameFeedback
 import com.fitnex.app.ui.theme.Bone
-import com.fitnex.app.ui.theme.Charcoal
-import com.fitnex.app.ui.theme.EmberRed
-import com.fitnex.app.ui.theme.Line
-import com.fitnex.app.ui.theme.Muted
-import com.fitnex.app.ui.theme.Steel
+import com.fitnex.app.ui.theme.Ember
+import com.fitnex.app.ui.theme.EmberBright
+import com.fitnex.app.ui.theme.Fog
+import com.fitnex.app.ui.theme.FogDim
+import com.fitnex.app.ui.theme.Gold
+import com.fitnex.app.ui.theme.Hairline
+import com.fitnex.app.ui.theme.Night
+import com.fitnex.app.ui.theme.Panel
 import java.util.concurrent.Executors
+import kotlin.math.ceil
 
 @Composable
 fun BattleScreen(viewModel: GameViewModel, battle: BattleUi) {
@@ -105,8 +120,8 @@ fun BattleScreen(viewModel: GameViewModel, battle: BattleUi) {
     LaunchedEffect(battle.pushUps) {
         if (battle.pushUps == 0) return@LaunchedEffect
         if (battle.hp == 0) feedback.finishingHit(settings) else feedback.rep(settings)
-        hitFlash.snapTo(0.30f)
-        hitFlash.animateTo(0f, tween(durationMillis = 260))
+        hitFlash.snapTo(0.32f)
+        hitFlash.animateTo(0f, tween(durationMillis = 280))
     }
 
     Box(
@@ -128,23 +143,33 @@ fun BattleScreen(viewModel: GameViewModel, battle: BattleUi) {
             )
         }
 
-        // Scrims keep the HUD readable over any camera scene.
+        // Cinematic scrims keep the HUD legible over any room.
         Box(
-            modifier = Modifier
+            Modifier
                 .fillMaxSize()
                 .background(
                     Brush.verticalGradient(
-                        0f to Color.Black.copy(alpha = 0.88f),
-                        0.26f to Color.Transparent,
-                        0.58f to Color.Transparent,
-                        1f to Color.Black.copy(alpha = 0.94f),
+                        0f to Color.Black.copy(alpha = 0.90f),
+                        0.28f to Color.Black.copy(alpha = 0.35f),
+                        0.52f to Color.Transparent,
+                        0.74f to Color.Black.copy(alpha = 0.55f),
+                        1f to Color.Black.copy(alpha = 0.96f),
                     ),
                 ),
         )
         Box(
-            modifier = Modifier
+            Modifier
                 .fillMaxSize()
-                .background(EmberRed.copy(alpha = hitFlash.value * 0.5f)),
+                .background(
+                    Brush.horizontalGradient(
+                        listOf(Color.Black.copy(alpha = 0.55f), Color.Transparent, Color.Black.copy(alpha = 0.55f)),
+                    ),
+                ),
+        )
+        Box(
+            Modifier
+                .fillMaxSize()
+                .background(Ember.copy(alpha = hitFlash.value * 0.45f)),
         )
 
         Column(
@@ -152,11 +177,13 @@ fun BattleScreen(viewModel: GameViewModel, battle: BattleUi) {
                 .fillMaxSize()
                 .statusBarsPadding()
                 .navigationBarsPadding()
-                .padding(horizontal = 20.dp, vertical = 14.dp),
-            verticalArrangement = Arrangement.SpaceBetween,
+                .padding(horizontal = 18.dp, vertical = 12.dp),
         ) {
-            BattleHeader(battle, onRetreat = viewModel::abandonBattle)
-            BattleFooter(battle, livePose)
+            CombatHeader(battle = battle, onRetreat = viewModel::abandonBattle)
+            Box(Modifier.weight(1f).fillMaxWidth()) {
+                FramingGuide(Modifier.fillMaxSize())
+            }
+            CombatFooter(battle = battle, livePose = livePose)
         }
     }
 
@@ -171,107 +198,264 @@ fun BattleScreen(viewModel: GameViewModel, battle: BattleUi) {
 }
 
 @Composable
-private fun BattleHeader(battle: BattleUi, onRetreat: () -> Unit) {
+private fun CombatHeader(battle: BattleUi, onRetreat: () -> Unit) {
+    val timeFraction = if (battle.boss.timeLimitSeconds > 0) {
+        battle.secondsRemaining.toFloat() / battle.boss.timeLimitSeconds.toFloat()
+    } else {
+        0f
+    }
+    val urgent = battle.secondsRemaining <= 30
+
     Column {
+        ProgressRail(
+            progress = timeFraction,
+            height = 2.dp,
+            accent = if (urgent) EmberBright else Bone.copy(alpha = 0.55f),
+            track = Color.White.copy(alpha = 0.10f),
+        )
+        Spacer(Modifier.height(14.dp))
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Box(
-                modifier = Modifier
-                    .background(Steel, RoundedCornerShape(2.dp))
-                    .padding(horizontal = 10.dp, vertical = 6.dp),
-            ) {
+            IconPlate(
+                icon = FitIcon.Close,
+                onClick = onRetreat,
+                contentDescription = "Retreat from battle",
+                tint = Bone.copy(alpha = 0.85f),
+            )
+            Column(horizontalAlignment = Alignment.End) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    FitIcon(
+                        FitIcon.Clock,
+                        tint = if (urgent) EmberBright else Fog,
+                        iconSize = 14.dp,
+                    )
+                    Spacer(Modifier.width(7.dp))
+                    Text(
+                        formatClock(battle.secondsRemaining),
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = if (urgent) EmberBright else Bone,
+                    )
+                }
+                Eyebrow("On the clock", color = FogDim)
+            }
+        }
+
+        Spacer(Modifier.height(18.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.Bottom,
+        ) {
+            Column(Modifier.weight(1f)) {
+                Eyebrow("Target", color = Fog)
+                Spacer(Modifier.height(4.dp))
                 Text(
-                    text = formatClock(battle.secondsRemaining),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = if (battle.secondsRemaining <= 30) EmberRed else Bone,
+                    battle.boss.name,
+                    style = MaterialTheme.typography.headlineLarge,
+                    color = Bone,
+                    maxLines = 1,
                 )
             }
-            TextButton(onClick = onRetreat) {
-                Text(
-                    "RETREAT",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = Muted,
+            Spacer(Modifier.width(12.dp))
+            Column(horizontalAlignment = Alignment.End) {
+                Tag(
+                    text = "Lv ${battle.level.toString().padStart(2, '0')}",
+                    color = Gold,
+                )
+                Spacer(Modifier.height(6.dp))
+                Eyebrow(
+                    battle.equippedTitle?.name ?: "No title",
+                    color = FogDim,
                 )
             }
         }
-        Spacer(Modifier.height(6.dp))
-        Text(
-            text = "LEVEL ${battle.level.toString().padStart(2, '0')} · " +
-                (battle.equippedTitle?.name?.uppercase() ?: "NO TITLE"),
-            style = MaterialTheme.typography.labelSmall,
-            color = Muted,
+
+        Spacer(Modifier.height(12.dp))
+        HealthBar(
+            fraction = battle.hp.toFloat() / battle.maxHp.toFloat(),
+            height = 9.dp,
+            segments = 24,
         )
-        Spacer(Modifier.height(6.dp))
-        Text(battle.boss.name, style = MaterialTheme.typography.displayLarge, color = Bone)
-        Spacer(Modifier.height(10.dp))
-        HealthBar(fraction = battle.hp.toFloat() / battle.maxHp.toFloat(), height = 10.dp)
-        Spacer(Modifier.height(6.dp))
-        Text(
-            "HP ${battle.hp} / ${battle.maxHp}",
-            style = MaterialTheme.typography.labelSmall,
-            color = Muted,
-        )
+        Spacer(Modifier.height(8.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Text(
+                "HP ${battle.hp} / ${battle.maxHp}",
+                style = MaterialTheme.typography.labelSmall,
+                color = Fog,
+            )
+            Text(
+                "${battle.damage} damage dealt",
+                style = MaterialTheme.typography.labelSmall,
+                color = Ember.copy(alpha = 0.9f),
+            )
+        }
     }
 }
 
 @Composable
-private fun BattleFooter(battle: BattleUi, livePose: LivePoseState) {
+private fun CombatFooter(battle: BattleUi, livePose: LivePoseState) {
+    val repScale = remember { Animatable(1f) }
+    val deltaAlpha = remember { Animatable(0f) }
+
+    LaunchedEffect(battle.pushUps) {
+        if (battle.pushUps == 0) return@LaunchedEffect
+        repScale.snapTo(1.16f)
+        repScale.animateTo(1f, spring(dampingRatio = 0.42f, stiffness = 620f))
+        deltaAlpha.snapTo(1f)
+        deltaAlpha.animateTo(0f, tween(durationMillis = 720))
+    }
+
+    val hpFraction = battle.hp.toFloat() / battle.maxHp.toFloat()
+    val repsToSlay = ceil(battle.hp / 2.0).toInt()
+
     Column {
+        TrackingStrip(livePose)
+
+        Spacer(Modifier.height(18.dp))
+
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.Bottom,
         ) {
             Column(Modifier.weight(1f)) {
-                Text("PUSH-UPS", style = MaterialTheme.typography.labelSmall, color = Muted)
+                Eyebrow("Push-ups", color = Fog)
                 Text(
                     text = battle.pushUps.toString(),
-                    style = MaterialTheme.typography.displayLarge,
-                    fontSize = 64.sp,
+                    style = MaterialTheme.typography.displayLarge.copy(
+                        fontSize = 74.sp,
+                        lineHeight = 78.sp,
+                    ),
                     color = Bone,
+                    modifier = Modifier.graphicsLayer {
+                        scaleX = repScale.value
+                        scaleY = repScale.value
+                    },
                 )
             }
             Column(horizontalAlignment = Alignment.End) {
-                Text("DAMAGE", style = MaterialTheme.typography.labelSmall, color = Muted)
-                Text(
-                    text = battle.damage.toString(),
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = EmberRed,
-                )
+                Box {
+                    Column(horizontalAlignment = Alignment.End) {
+                        Eyebrow("To slay", color = FogDim)
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            if (repsToSlay == 0) "—" else "$repsToSlay reps",
+                            style = MaterialTheme.typography.titleLarge,
+                            color = Bone,
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            "DMG ${battle.damage}",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = Ember,
+                        )
+                    }
+                    Text(
+                        "+2",
+                        style = MaterialTheme.typography.titleLarge,
+                        color = EmberBright,
+                        modifier = Modifier
+                            .align(Alignment.TopEnd)
+                            .graphicsLayer {
+                                alpha = deltaAlpha.value
+                                translationY = -34f * (1f - deltaAlpha.value)
+                            },
+                    )
+                }
             }
         }
+
         Spacer(Modifier.height(14.dp))
-        Row(
-            modifier = Modifier
-                .background(Color.Black.copy(alpha = 0.45f), RoundedCornerShape(2.dp))
-                .border(1.dp, Line, RoundedCornerShape(2.dp))
-                .padding(horizontal = 12.dp, vertical = 9.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Box(
-                Modifier
-                    .size(7.dp)
-                    .background(if (livePose.tracked) EmberRed else Muted, CircleShape),
-            )
-            Spacer(Modifier.width(8.dp))
-            Text(livePose.feedback, style = MaterialTheme.typography.bodyMedium, color = Bone)
-            livePose.elbowAngle?.let { angle ->
-                Spacer(Modifier.width(10.dp))
-                Text(
-                    "${angle.toInt()}°",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = Muted,
-                )
-            }
-        }
-        Spacer(Modifier.height(10.dp))
-        Text(
-            "Keep shoulders and hands inside the frame.",
-            style = MaterialTheme.typography.bodySmall,
-            color = Muted,
+        ProgressRail(
+            progress = 1f - hpFraction,
+            height = 3.dp,
+            accent = Ember,
+            track = Color.White.copy(alpha = 0.12f),
         )
+        Spacer(Modifier.height(9.dp))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Eyebrow(
+                if (battle.extensionUsed) "Extension spent" else "Hold form",
+                color = FogDim,
+            )
+            Eyebrow("${((1f - hpFraction) * 100).toInt()}% broken", color = FogDim)
+        }
+    }
+}
+
+@Composable
+private fun TrackingStrip(livePose: LivePoseState) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(3.dp))
+            .border(
+                1.dp,
+                if (livePose.tracked) Ember.copy(alpha = 0.35f) else Hairline,
+                RoundedCornerShape(3.dp),
+            )
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            Modifier
+                .size(7.dp)
+                .background(if (livePose.tracked) EmberBright else FogDim, CircleShape),
+        )
+        Spacer(Modifier.width(10.dp))
+        Text(
+            livePose.feedback,
+            style = MaterialTheme.typography.bodyMedium,
+            color = Bone,
+            modifier = Modifier.weight(1f),
+        )
+        livePose.elbowAngle?.let { angle ->
+            Text(
+                "${angle.toInt()}°",
+                style = MaterialTheme.typography.labelSmall,
+                color = Fog,
+            )
+        }
+    }
+}
+
+/** Four corner brackets that frame the set-up without boxing the viewfinder. */
+@Composable
+private fun FramingGuide(modifier: Modifier = Modifier) {
+    Canvas(modifier) {
+        val inset = 26.dp.toPx()
+        val arm = 26.dp.toPx()
+        val stroke = 1.2.dp.toPx()
+        val color = Bone.copy(alpha = 0.22f)
+        val corners = listOf(
+            Offset(inset, inset) to Offset(1f, 1f),
+            Offset(size.width - inset, inset) to Offset(-1f, 1f),
+            Offset(inset, size.height - inset) to Offset(1f, -1f),
+            Offset(size.width - inset, size.height - inset) to Offset(-1f, -1f),
+        )
+        corners.forEach { (point, direction) ->
+            drawLine(
+                color = color,
+                start = point,
+                end = Offset(point.x + arm * direction.x, point.y),
+                strokeWidth = stroke,
+            )
+            drawLine(
+                color = color,
+                start = point,
+                end = Offset(point.x, point.y + arm * direction.y),
+                strokeWidth = stroke,
+            )
+        }
     }
 }
 
@@ -364,31 +548,35 @@ private fun CameraFeed(
 private fun CameraPermissionPanel(onRequest: () -> Unit, modifier: Modifier = Modifier) {
     Column(
         modifier = modifier
-            .background(Charcoal)
+            .background(Night)
             .padding(32.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text(
-            "CAMERA OFFLINE",
-            style = MaterialTheme.typography.labelMedium,
-            color = EmberRed,
-        )
-        Spacer(Modifier.height(12.dp))
-        Text(
-            "FitNex needs the camera to track your push-ups. Nothing is recorded or uploaded.",
-            style = MaterialTheme.typography.bodyMedium,
-            color = Muted,
-        )
-        Spacer(Modifier.height(20.dp))
-        TextButton(onClick = onRequest) {
-            Text(
-                "ENABLE CAMERA",
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.Bold,
-                color = Bone,
-            )
+        Box(
+            Modifier
+                .size(64.dp)
+                .border(1.dp, Hairline, CircleShape),
+            contentAlignment = Alignment.Center,
+        ) {
+            FitIcon(FitIcon.Camera, tint = Ember, iconSize = 26.dp)
         }
+        Spacer(Modifier.height(22.dp))
+        Eyebrow("Camera offline", color = Ember)
+        Spacer(Modifier.height(10.dp))
+        Text(
+            "The hunt needs your eyes on the floor. FitNex tracks your reps in memory — nothing is recorded, stored or uploaded.",
+            style = MaterialTheme.typography.bodyMedium,
+            color = Fog,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(Modifier.height(26.dp))
+        PrimaryAction(
+            text = "Enable camera",
+            onClick = onRequest,
+            icon = FitIcon.Camera,
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 }
 
@@ -399,39 +587,52 @@ private fun TimeUpDialog(
     onAccept: () -> Unit,
     onDecline: () -> Unit,
 ) {
-    AlertDialog(
-        onDismissRequest = { },
-        containerColor = Charcoal,
-        title = {
-            Text("TIME'S UP", style = MaterialTheme.typography.labelMedium, color = EmberRed)
-        },
-        text = {
+    Dialog(onDismissRequest = { }) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .background(Panel, RoundedCornerShape(4.dp))
+                .border(1.dp, Hairline, RoundedCornerShape(4.dp))
+                .padding(24.dp),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                FitIcon(FitIcon.Clock, tint = Ember, iconSize = 16.dp)
+                Spacer(Modifier.width(8.dp))
+                Eyebrow("The clock has spoken", color = Ember)
+            }
+            Spacer(Modifier.height(14.dp))
+            Text(
+                "TIME'S UP",
+                style = MaterialTheme.typography.headlineLarge,
+                color = Bone,
+            )
+            Spacer(Modifier.height(10.dp))
             Text(
                 if (canExtend) {
-                    "The $bossName still stands. Take one more minute? The boss heals fully and " +
-                        "the fight restarts."
+                    "The $bossName still stands. Take one more minute? It heals fully and the round restarts."
                 } else {
                     "Your minute is spent. The $bossName holds the gate."
                 },
                 style = MaterialTheme.typography.bodyMedium,
-                color = Muted,
+                color = Fog,
             )
-        },
-        confirmButton = {
+            Spacer(Modifier.height(22.dp))
             if (canExtend) {
-                TextButton(onClick = onAccept) {
-                    Text("ONE MORE MINUTE", style = MaterialTheme.typography.labelSmall, color = EmberRed)
-                }
+                PrimaryAction(
+                    text = "One more minute",
+                    onClick = onAccept,
+                    icon = FitIcon.Flame,
+                )
+                Spacer(Modifier.height(10.dp))
             }
-        },
-        dismissButton = {
-            TextButton(onClick = onDecline) {
+            TextButton(onClick = onDecline, modifier = Modifier.fillMaxWidth()) {
                 Text(
-                    if (canExtend) "RETREAT" else "ACCEPT DEFEAT",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = Muted,
+                    if (canExtend) "Retreat" else "Accept defeat",
+                    style = MaterialTheme.typography.labelMedium,
+                    color = Fog,
+                    fontWeight = FontWeight.Bold,
                 )
             }
-        },
-    )
+        }
+    }
 }

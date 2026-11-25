@@ -13,3 +13,12 @@ local.properties
 # Release artifacts (attached to GitHub releases, not committed)
 /FitNEX-*.apk
 *.log
+
+# Release signing (shared Android key stays outside the repo)
+keystore.properties
+*.jks
+*.keystore
+
+# Local UI verification captures
+/shots/
+/emulator.log

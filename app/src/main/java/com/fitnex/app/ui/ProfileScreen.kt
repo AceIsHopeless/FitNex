@@ -1,5 +1,7 @@
 package com.fitnex.app.ui
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -12,19 +14,18 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -37,6 +38,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.fitnex.app.data.CameraFacing
@@ -44,13 +47,23 @@ import com.fitnex.app.data.GameSettings
 import com.fitnex.app.domain.BossCatalog
 import com.fitnex.app.domain.PlayerState
 import com.fitnex.app.domain.TitleCatalog
-import com.fitnex.app.ui.theme.Ash
+import com.fitnex.app.ui.components.BossThumb
+import com.fitnex.app.ui.components.Eyebrow
+import com.fitnex.app.ui.components.FitIcon
+import com.fitnex.app.ui.components.HairlineRule
+import com.fitnex.app.ui.components.Metrics
+import com.fitnex.app.ui.components.RankSigil
+import com.fitnex.app.ui.components.SectionHeader
+import com.fitnex.app.ui.components.Tag
 import com.fitnex.app.ui.theme.Bone
-import com.fitnex.app.ui.theme.Charcoal
-import com.fitnex.app.ui.theme.EmberRed
-import com.fitnex.app.ui.theme.Line
-import com.fitnex.app.ui.theme.Muted
-import com.fitnex.app.ui.theme.Steel
+import com.fitnex.app.ui.theme.Ember
+import com.fitnex.app.ui.theme.EmberBright
+import com.fitnex.app.ui.theme.Fog
+import com.fitnex.app.ui.theme.FogDim
+import com.fitnex.app.ui.theme.Gold
+import com.fitnex.app.ui.theme.Hairline
+import com.fitnex.app.ui.theme.Panel
+import com.fitnex.app.ui.theme.PanelRaised
 
 @Composable
 fun ProfileScreen(
@@ -63,114 +76,149 @@ fun ProfileScreen(
     var showResetDialog by remember { mutableStateOf(false) }
 
     LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Ash)
-            .statusBarsPadding(),
-        contentPadding = PaddingValues(start = 22.dp, end = 22.dp, top = 18.dp, bottom = 28.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(
+            start = Metrics.Gutter,
+            end = Metrics.Gutter,
+            top = 10.dp,
+            bottom = Metrics.BottomBreathing,
+        ),
+        verticalArrangement = Arrangement.spacedBy(26.dp),
     ) {
-        item { Text("PROFILE", style = MaterialTheme.typography.displayLarge, color = Bone) }
+        item {
+            Column {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Eyebrow("Hero", color = Fog)
+                    Tag("Lv ${state.level.toString().padStart(2, '0')}", color = Gold)
+                }
+                Spacer(Modifier.height(16.dp))
+                HairlineRule()
+            }
+        }
 
         item {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .size(76.dp)
-                        .border(1.dp, EmberRed.copy(alpha = 0.55f), CircleShape),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            text = state.level.toString().padStart(2, '0'),
-                            style = MaterialTheme.typography.headlineMedium,
-                            color = Bone,
-                        )
-                        Text("LEVEL", style = MaterialTheme.typography.labelSmall, color = Muted)
-                    }
-                }
-                Spacer(Modifier.padding(start = 16.dp))
-                Column {
-                    Text("HERO", style = MaterialTheme.typography.titleMedium, color = Bone)
-                    Spacer(Modifier.height(3.dp))
+                RankSigil(
+                    level = state.level,
+                    size = 118.dp,
+                    progress = rankProgressFor(state.level),
+                )
+                Spacer(Modifier.width(20.dp))
+                Column(Modifier.weight(1f)) {
                     Text(
                         state.rank.title,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = EmberRed,
+                        style = MaterialTheme.typography.headlineLarge,
+                        color = Bone,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
-                    Spacer(Modifier.height(5.dp))
+                    Spacer(Modifier.height(6.dp))
                     Text(
-                        state.equippedTitle?.name?.uppercase() ?: "NO TITLE EQUIPPED",
+                        (state.equippedTitle?.name ?: "No title equipped").uppercase(),
                         style = MaterialTheme.typography.labelSmall,
-                        color = Muted,
+                        color = if (state.equippedTitle != null) Gold else FogDim,
+                    )
+                    Spacer(Modifier.height(14.dp))
+                    Row {
+                        Column {
+                            Text(
+                                state.lifetimePushUps.toString(),
+                                style = MaterialTheme.typography.headlineMedium,
+                                color = Bone,
+                            )
+                            Eyebrow("Lifetime reps", color = FogDim)
+                        }
+                        Spacer(Modifier.width(22.dp))
+                        Column {
+                            Text(
+                                "${state.bossesDefeated}/${BossCatalog.all.size}",
+                                style = MaterialTheme.typography.headlineMedium,
+                                color = Bone,
+                            )
+                            Eyebrow("Bosses", color = FogDim)
+                        }
+                    }
+                }
+            }
+        }
+
+        item {
+            Column {
+                SectionHeader("Campaign", meta = "${state.defeatedBossIds.distinct().size} felled")
+                Spacer(Modifier.height(16.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    BossCatalog.all.forEach { boss ->
+                        val slain = boss.id in state.defeatedBossIds
+                        Column(
+                            modifier = Modifier.weight(1f),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                BossThumb(bossId = boss.id, size = 54.dp, dim = !slain)
+                                if (!slain) {
+                                    FitIcon(FitIcon.Lock, tint = FogDim, iconSize = 14.dp)
+                                }
+                            }
+                            Spacer(Modifier.height(8.dp))
+                            Text(
+                                boss.name.uppercase(),
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontSize = 7.5.sp,
+                                    letterSpacing = 0.6.sp,
+                                ),
+                                color = if (slain) Bone else FogDim,
+                                maxLines = 1,
+                                textAlign = TextAlign.Center,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        item {
+            Column {
+                SectionHeader(
+                    title = "Titles",
+                    meta = "${state.unlockedTitleIds.size} / ${TitleCatalog.all.size}",
+                )
+                Spacer(Modifier.height(6.dp))
+                TitleCatalog.all.forEach { title ->
+                    val unlocked = title.id in state.unlockedTitleIds
+                    val equipped = state.equippedTitleId == title.id
+                    ProfileTitleRow(
+                        name = title.name,
+                        description = if (unlocked) {
+                            title.description
+                        } else {
+                            val bossName = BossCatalog.all.first { it.id == title.bossId }.name
+                            "Locked · defeat $bossName"
+                        },
+                        unlocked = unlocked,
+                        equipped = equipped,
+                        onEquip = { onEquipTitle(if (equipped) null else title.id) },
                     )
                 }
             }
         }
 
         item {
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                MiniStat("PUSH-UPS", state.lifetimePushUps.toString(), Modifier.weight(1f))
-                MiniStat("BOSSES", state.bossesDefeated.toString(), Modifier.weight(1f))
-                MiniStat("WINS", state.battleWins.toString(), Modifier.weight(1f))
-            }
-        }
-
-        item {
-            Text(
-                "TITLES",
-                style = MaterialTheme.typography.labelSmall,
-                color = Muted,
-                modifier = Modifier.padding(top = 8.dp),
-            )
-        }
-
-        items(TitleCatalog.all.size) { index ->
-            val title = TitleCatalog.all[index]
-            val unlocked = title.id in state.unlockedTitleIds
-            val equipped = state.equippedTitleId == title.id
-            TitleRow(
-                name = title.name,
-                description = if (unlocked) {
-                    title.description
-                } else {
-                    "Locked · defeat ${BossCatalog.all.first { it.id == title.bossId }.name}"
-                },
-                unlocked = unlocked,
-                equipped = equipped,
-                onEquip = { onEquipTitle(if (equipped) null else title.id) },
-            )
-        }
-
-        item {
-            Text(
-                "SETTINGS",
-                style = MaterialTheme.typography.labelSmall,
-                color = Muted,
-                modifier = Modifier.padding(top = 8.dp),
-            )
-        }
-
-        item {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Charcoal, RoundedCornerShape(3.dp))
-                    .border(1.dp, Line, RoundedCornerShape(3.dp))
-                    .padding(horizontal = 16.dp, vertical = 6.dp),
-            ) {
-                Text(
-                    "CAMERA",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = Muted,
-                    modifier = Modifier.padding(top = 12.dp),
-                )
-                Spacer(Modifier.height(10.dp))
-                CameraSelector(settings) { facing ->
+            Column {
+                SectionHeader("Preferences")
+                Spacer(Modifier.height(16.dp))
+                Eyebrow("Camera", color = FogDim)
+                Spacer(Modifier.height(8.dp))
+                CameraSelector(settings = settings, onSelect = { facing ->
                     onUpdateSettings { it.copy(cameraFacing = facing) }
-                }
-                Spacer(Modifier.height(14.dp))
-                HorizontalDivider(color = Line, thickness = 1.dp)
+                })
+                Spacer(Modifier.height(20.dp))
                 ToggleRow(
                     label = "Haptics",
                     description = "A pulse for every counted rep.",
@@ -179,7 +227,7 @@ fun ProfileScreen(
                         onUpdateSettings { it.copy(hapticsEnabled = enabled) }
                     },
                 )
-                HorizontalDivider(color = Line, thickness = 1.dp)
+                HairlineRule()
                 ToggleRow(
                     label = "Sound",
                     description = "Rep ticks and battle stings.",
@@ -192,32 +240,52 @@ fun ProfileScreen(
         }
 
         item {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Charcoal, RoundedCornerShape(3.dp))
-                    .border(1.dp, Line, RoundedCornerShape(3.dp))
-                    .padding(16.dp),
-            ) {
-                Text("DATA", style = MaterialTheme.typography.labelSmall, color = Muted)
-                Spacer(Modifier.height(10.dp))
+            Column {
+                SectionHeader("Data")
+                Spacer(Modifier.height(12.dp))
                 Text(
-                    "Reset erases your level, titles, history and stats. Settings are kept.",
+                    "Resetting erases your level, titles, history and stats. Settings are kept.",
                     style = MaterialTheme.typography.bodySmall,
-                    color = Muted,
+                    color = Fog,
                 )
-                Spacer(Modifier.height(10.dp))
-                TextButton(
-                    onClick = { showResetDialog = true },
-                    modifier = Modifier.padding(0.dp),
+                Spacer(Modifier.height(14.dp))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(3.dp))
+                        .border(1.dp, Ember.copy(alpha = 0.28f), RoundedCornerShape(3.dp))
+                        .clickable { showResetDialog = true }
+                        .padding(horizontal = 16.dp, vertical = 15.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
+                    FitIcon(FitIcon.Reset, tint = Ember, iconSize = 17.dp)
+                    Spacer(Modifier.width(12.dp))
                     Text(
-                        "RESET PROGRESS",
-                        style = MaterialTheme.typography.labelSmall,
-                        fontWeight = FontWeight.Bold,
-                        color = EmberRed,
+                        "Reset progress",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Ember,
+                        modifier = Modifier.weight(1f),
                     )
+                    FitIcon(FitIcon.ChevronRight, tint = Ember.copy(alpha = 0.6f), iconSize = 14.dp)
                 }
+            }
+        }
+
+        item {
+            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
+                HairlineRule()
+                Spacer(Modifier.height(16.dp))
+                Text(
+                    "FITNEX 1.0",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = FogDim,
+                )
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    "All progress stays on this device.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = FogDim,
+                )
             }
         }
     }
@@ -234,61 +302,70 @@ fun ProfileScreen(
 }
 
 @Composable
-private fun MiniStat(label: String, value: String, modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier
-            .background(Charcoal, RoundedCornerShape(3.dp))
-            .border(1.dp, Line, RoundedCornerShape(3.dp))
-            .padding(14.dp),
-    ) {
-        Text(label, style = MaterialTheme.typography.labelSmall, color = Muted)
-        Spacer(Modifier.height(6.dp))
-        Text(value, style = MaterialTheme.typography.titleMedium, color = Bone)
-    }
-}
-
-@Composable
-private fun TitleRow(
+private fun ProfileTitleRow(
     name: String,
     description: String,
     unlocked: Boolean,
     equipped: Boolean,
     onEquip: () -> Unit,
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Charcoal, RoundedCornerShape(3.dp))
-            .border(1.dp, if (equipped) EmberRed.copy(alpha = 0.6f) else Line, RoundedCornerShape(3.dp))
-            .padding(start = 16.dp, end = 8.dp, top = 12.dp, bottom = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(Modifier.weight(1f)) {
-            Text(
-                name,
-                style = MaterialTheme.typography.titleMedium,
-                color = if (unlocked) Bone else Muted,
-            )
-            Spacer(Modifier.height(3.dp))
-            Text(description, style = MaterialTheme.typography.bodySmall, color = Muted)
+    val borderColor by animateColorAsState(
+        targetValue = if (equipped) Ember.copy(alpha = 0.5f) else Hairline.copy(alpha = 0.55f),
+        label = "titleBorder",
+    )
+    Column {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable(enabled = unlocked, onClick = onEquip)
+                .padding(vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .border(1.dp, borderColor, CircleShape)
+                    .background(if (equipped) Ember.copy(alpha = 0.10f) else Color.Transparent),
+                contentAlignment = Alignment.Center,
+            ) {
+                FitIcon(
+                    icon = if (unlocked) FitIcon.Trophy else FitIcon.Lock,
+                    tint = when {
+                        equipped -> Ember
+                        unlocked -> Gold
+                        else -> FogDim
+                    },
+                    iconSize = 15.dp,
+                )
+            }
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    name,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = if (unlocked) Bone else FogDim,
+                )
+                Spacer(Modifier.height(3.dp))
+                Text(
+                    description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = FogDim,
+                )
+            }
             if (equipped) {
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.width(10.dp))
+                Tag("Equipped", color = Ember)
+            } else if (unlocked) {
+                Spacer(Modifier.width(10.dp))
                 Text(
-                    "EQUIPPED",
+                    "EQUIP",
                     style = MaterialTheme.typography.labelSmall,
-                    color = EmberRed,
+                    color = Ember,
                 )
             }
         }
-        if (unlocked) {
-            TextButton(onClick = onEquip) {
-                Text(
-                    if (equipped) "UNEQUIP" else "EQUIP",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = if (equipped) Muted else EmberRed,
-                )
-            }
-        }
+        HairlineRule(color = Hairline.copy(alpha = 0.5f))
     }
 }
 
@@ -297,9 +374,8 @@ private fun CameraSelector(settings: GameSettings, onSelect: (CameraFacing) -> U
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(2.dp))
-            .background(Steel)
-            .border(1.dp, Line, RoundedCornerShape(2.dp)),
+            .clip(RoundedCornerShape(3.dp))
+            .border(1.dp, Hairline, RoundedCornerShape(3.dp)),
     ) {
         CameraFacing.entries.forEach { facing ->
             val active = settings.cameraFacing == facing
@@ -307,14 +383,14 @@ private fun CameraSelector(settings: GameSettings, onSelect: (CameraFacing) -> U
                 modifier = Modifier
                     .weight(1f)
                     .clickable { onSelect(facing) }
-                    .background(if (active) EmberRed else Color.Transparent)
-                    .padding(vertical = 10.dp),
+                    .background(if (active) Ember.copy(alpha = 0.16f) else Color.Transparent)
+                    .padding(vertical = 13.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
                     if (facing == CameraFacing.FRONT) "FRONT" else "BACK",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = if (active) Color.White else Muted,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = if (active) Bone else FogDim,
                 )
             }
         }
@@ -329,27 +405,47 @@ private fun ToggleRow(
     onCheckedChange: (Boolean) -> Unit,
 ) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 10.dp),
+        modifier = Modifier.fillMaxWidth().padding(vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
             Text(label, style = MaterialTheme.typography.titleMedium, color = Bone)
-            Spacer(Modifier.height(2.dp))
-            Text(description, style = MaterialTheme.typography.bodySmall, color = Muted)
+            Spacer(Modifier.height(3.dp))
+            Text(description, style = MaterialTheme.typography.bodySmall, color = FogDim)
         }
-        Switch(
-            checked = checked,
-            onCheckedChange = onCheckedChange,
-            colors = SwitchDefaults.colors(
-                checkedThumbColor = Color.White,
-                checkedTrackColor = EmberRed,
-                checkedBorderColor = EmberRed,
-                uncheckedThumbColor = Muted,
-                uncheckedTrackColor = Steel,
-                uncheckedBorderColor = Line,
-            ),
+        FitSwitch(checked = checked, onCheckedChange = onCheckedChange)
+    }
+}
+
+@Composable
+private fun FitSwitch(checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+    val knobOffset by animateDpAsState(
+        targetValue = if (checked) 22.dp else 3.dp,
+        label = "switchKnob",
+    )
+    val track by animateColorAsState(
+        targetValue = if (checked) Ember.copy(alpha = 0.24f) else PanelRaised,
+        label = "switchTrack",
+    )
+    Box(
+        modifier = Modifier
+            .width(47.dp)
+            .height(27.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .background(track)
+            .border(
+                1.dp,
+                if (checked) Ember.copy(alpha = 0.6f) else Hairline,
+                RoundedCornerShape(14.dp),
+            )
+            .clickable { onCheckedChange(!checked) },
+    ) {
+        Box(
+            Modifier
+                .offset(x = knobOffset, y = 3.dp)
+                .size(19.dp)
+                .clip(CircleShape)
+                .background(if (checked) EmberBright else FogDim),
         )
     }
 }
@@ -357,52 +453,61 @@ private fun ToggleRow(
 @Composable
 private fun ResetDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
     var typed by remember { mutableStateOf("") }
+    val confirmed = typed.trim().uppercase() == "RESET"
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        containerColor = Charcoal,
+        containerColor = Panel,
+        shape = RoundedCornerShape(4.dp),
         title = {
-            Text("RESET PROGRESS", style = MaterialTheme.typography.labelMedium, color = EmberRed)
+            Column {
+                Eyebrow("Point of no return", color = Ember)
+                Spacer(Modifier.height(10.dp))
+                Text(
+                    "Reset progress",
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = Bone,
+                )
+            }
         },
         text = {
             Column {
                 Text(
-                    "This erases every level, title, record and stat. It cannot be undone. " +
-                        "Type RESET to confirm.",
+                    "This erases every level, title, record and stat. It cannot be undone. Type RESET to confirm.",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = Muted,
+                    color = Fog,
                 )
-                Spacer(Modifier.height(14.dp))
+                Spacer(Modifier.height(16.dp))
                 OutlinedTextField(
                     value = typed,
                     onValueChange = { typed = it },
                     singleLine = true,
                     textStyle = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(3.dp),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = EmberRed,
-                        unfocusedBorderColor = Line,
+                        focusedBorderColor = Ember,
+                        unfocusedBorderColor = Hairline,
                         focusedTextColor = Bone,
                         unfocusedTextColor = Bone,
-                        cursorColor = EmberRed,
+                        cursorColor = Ember,
                     ),
                 )
             }
         },
         confirmButton = {
-            TextButton(
-                onClick = onConfirm,
-                enabled = typed.trim().uppercase() == "RESET",
-            ) {
+            TextButton(onClick = onConfirm, enabled = confirmed) {
                 Text(
                     "RESET",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = if (typed.trim().uppercase() == "RESET") EmberRed else Muted,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = if (confirmed) Ember else FogDim,
                 )
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("CANCEL", style = MaterialTheme.typography.labelSmall, color = Muted)
+                Text("CANCEL", style = MaterialTheme.typography.labelMedium, color = FogDim)
             }
         },
     )

@@ -1,22 +1,32 @@
 package com.fitnex.app.ui
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.fitnex.app.ui.components.FitNexBottomBar
+import com.fitnex.app.ui.components.Atmosphere
+import com.fitnex.app.ui.components.FitNexDock
 import com.fitnex.app.ui.components.FitNexTab
-import com.fitnex.app.ui.theme.Ash
+import com.fitnex.app.ui.theme.Night
 
 @Composable
 fun FitNexApp(viewModel: GameViewModel = viewModel()) {
@@ -29,67 +39,88 @@ fun FitNexApp(viewModel: GameViewModel = viewModel()) {
     val battle = viewModel.battleUi
     val summary = viewModel.battleSummary
 
-    // A fight owns the whole screen: no tab bar under a camera viewfinder.
-    if (battle != null) {
-        BattleScreen(viewModel, battle)
-        return
-    }
+    Box(Modifier.fillMaxSize().background(Night)) {
+        // A fight owns the whole screen: no dock under a camera viewfinder.
+        if (battle != null) {
+            BattleScreen(viewModel, battle)
+        } else if (summary != null) {
+            ResultScreen(
+                summary = summary,
+                settings = settings,
+                onRetry = viewModel::startBattle,
+                onDismiss = {
+                    viewModel.clearSummary()
+                    tab = originTab
+                },
+            )
+        } else {
+            BackHandler(enabled = tab != FitNexTab.HOME) { tab = FitNexTab.HOME }
 
-    if (summary != null) {
-        ResultScreen(
-            summary = summary,
-            settings = settings,
-            onRetry = viewModel::startBattle,
-            onDismiss = {
-                viewModel.clearSummary()
-                tab = originTab
-            },
-        )
-        return
-    }
+            Atmosphere()
 
-    BackHandler(enabled = tab != FitNexTab.HOME) { tab = FitNexTab.HOME }
+            Column(Modifier.fillMaxSize()) {
+                // The shell owns the status-bar inset, so scrolling content is
+                // clipped below the clock instead of sliding under it.
+                Box(
+                    Modifier
+                        .weight(1f)
+                        .fillMaxWidth()
+                        .statusBarsPadding(),
+                ) {
+                    AnimatedContent(
+                        targetState = tab,
+                        transitionSpec = {
+                            val forward = targetState.ordinal > initialState.ordinal
+                            val direction = if (forward) 1 else -1
+                            (
+                                fadeIn(tween(240)) +
+                                    slideInHorizontally(tween(320)) { width ->
+                                        direction * width / 14
+                                    }
+                                ).togetherWith(
+                                fadeOut(tween(160)) +
+                                    slideOutHorizontally(tween(280)) { width ->
+                                        -direction * width / 18
+                                    },
+                            )
+                        },
+                        label = "tabTransition",
+                        modifier = Modifier.fillMaxSize(),
+                    ) { current ->
+                        when (current) {
+                            FitNexTab.HOME -> HomeScreen(
+                                state = playerState,
+                                onStartBattle = {
+                                    originTab = FitNexTab.HOME
+                                    viewModel.startBattle()
+                                },
+                                onOpenBriefing = { tab = FitNexTab.BATTLE },
+                                onOpenStats = { tab = FitNexTab.STATS },
+                            )
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Ash),
-    ) {
-        Box(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth(),
-        ) {
-            when (tab) {
-                FitNexTab.HOME -> HomeScreen(
-                    state = playerState,
-                    onStartBattle = {
-                        originTab = FitNexTab.HOME
-                        viewModel.startBattle()
-                    },
-                    onOpenBriefing = { tab = FitNexTab.BATTLE },
-                    onOpenStats = { tab = FitNexTab.STATS },
-                )
+                            FitNexTab.BATTLE -> BriefingScreen(
+                                state = playerState,
+                                onStartBattle = {
+                                    originTab = FitNexTab.BATTLE
+                                    viewModel.startBattle()
+                                },
+                            )
 
-                FitNexTab.BATTLE -> BriefingScreen(
-                    state = playerState,
-                    onStartBattle = {
-                        originTab = FitNexTab.BATTLE
-                        viewModel.startBattle()
-                    },
-                )
+                            FitNexTab.STATS -> StatsScreen(state = playerState)
 
-                FitNexTab.STATS -> StatsScreen(state = playerState)
+                            FitNexTab.PROFILE -> ProfileScreen(
+                                state = playerState,
+                                settings = settings,
+                                onEquipTitle = viewModel::equipTitle,
+                                onUpdateSettings = viewModel::updateSettings,
+                                onResetProgress = viewModel::resetProgress,
+                            )
+                        }
+                    }
+                }
 
-                FitNexTab.PROFILE -> ProfileScreen(
-                    state = playerState,
-                    settings = settings,
-                    onEquipTitle = viewModel::equipTitle,
-                    onUpdateSettings = viewModel::updateSettings,
-                    onResetProgress = viewModel::resetProgress,
-                )
+                FitNexDock(current = tab, onSelect = { tab = it })
             }
         }
-        FitNexBottomBar(current = tab, onSelect = { tab = it })
     }
 }

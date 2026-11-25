@@ -1,19 +1,18 @@
 package com.fitnex.app.ui
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -24,165 +23,176 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.fitnex.app.domain.BossCatalog
 import com.fitnex.app.domain.PlayerState
 import com.fitnex.app.domain.repsLastSevenDays
+import com.fitnex.app.ui.components.Eyebrow
+import com.fitnex.app.ui.components.FitIcon
+import com.fitnex.app.ui.components.HairlineRule
+import com.fitnex.app.ui.components.Metrics
+import com.fitnex.app.ui.components.SectionHeader
+import com.fitnex.app.ui.components.Tag
+import com.fitnex.app.ui.components.WeeklyRepChart
 import com.fitnex.app.ui.components.WorkoutRow
-import com.fitnex.app.ui.theme.Ash
 import com.fitnex.app.ui.theme.Bone
-import com.fitnex.app.ui.theme.Charcoal
-import com.fitnex.app.ui.theme.EmberRed
-import com.fitnex.app.ui.theme.Line
-import com.fitnex.app.ui.theme.Muted
-import com.fitnex.app.ui.theme.Steel
+import com.fitnex.app.ui.theme.Ember
+import com.fitnex.app.ui.theme.Fog
+import com.fitnex.app.ui.theme.FogDim
+import com.fitnex.app.ui.theme.Gold
+import com.fitnex.app.ui.theme.Hairline
+import com.fitnex.app.ui.theme.Panel
 
 @Composable
 fun StatsScreen(state: PlayerState) {
     val days = remember(state.history) { state.repsLastSevenDays() }
+    val weekTotal = days.sumOf { it.pushUps }
+    val winRate = if (state.battleAttempts > 0) {
+        (state.battleWins * 100) / state.battleAttempts
+    } else {
+        0
+    }
 
     LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(Ash)
-            .statusBarsPadding(),
-        contentPadding = PaddingValues(start = 22.dp, end = 22.dp, top = 18.dp, bottom = 28.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp),
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(
+            start = Metrics.Gutter,
+            end = Metrics.Gutter,
+            top = 10.dp,
+            bottom = Metrics.BottomBreathing,
+        ),
+        verticalArrangement = Arrangement.spacedBy(26.dp),
     ) {
         item {
             Column {
-                Text("STATS", style = MaterialTheme.typography.displayLarge, color = Bone)
-                Spacer(Modifier.height(4.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Eyebrow("The record", color = Fog)
+                    Tag(state.rank.title, color = Gold)
+                }
+                Spacer(Modifier.height(16.dp))
+                Row(verticalAlignment = Alignment.Bottom) {
+                    Text(
+                        state.lifetimePushUps.toString(),
+                        style = MaterialTheme.typography.displayLarge.copy(fontSize = 58.sp, lineHeight = 60.sp),
+                        color = Bone,
+                    )
+                    Spacer(Modifier.width(12.dp))
+                    Text(
+                        "reps",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Fog,
+                        modifier = Modifier.padding(bottom = 10.dp),
+                    )
+                }
+                Spacer(Modifier.height(6.dp))
                 Text(
-                    "LIFETIME RECORD",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = Muted,
+                    "carved into the record since day one",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = FogDim,
                 )
+                Spacer(Modifier.height(18.dp))
+                HairlineRule()
             }
         }
 
         item {
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                StatBlock("LIFETIME PUSH-UPS", state.lifetimePushUps.toString(), Modifier.weight(1f))
-                StatBlock("BOSSES DEFEATED", state.bossesDefeated.toString(), Modifier.weight(1f))
-            }
-        }
-        item {
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                StatBlock("CURRENT LEVEL", state.level.toString(), Modifier.weight(1f))
-                StatBlock("RANK", state.rank.title, Modifier.weight(1f))
-            }
-        }
-        item {
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                StatBlock("BATTLES WON", state.battleWins.toString(), Modifier.weight(1f))
-                StatBlock("BATTLES LOST", state.battlesLost.toString(), Modifier.weight(1f))
-            }
-        }
-        item {
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                StatBlock(
-                    "HIGHEST BOSS",
-                    state.highestBossDefeated?.name ?: "None",
-                    Modifier.weight(1f),
-                )
-                StatBlock("BEST BATTLE", "${state.bestPushUpsInBattle} reps", Modifier.weight(1f))
+            Column {
+                SectionHeader("Ledger")
+                Spacer(Modifier.height(6.dp))
+                LedgerRow("Bosses defeated", "${state.bossesDefeated} / ${BossCatalog.all.size}")
+                LedgerRow("Battles won", state.battleWins.toString())
+                LedgerRow("Battles lost", state.battlesLost.toString())
+                LedgerRow("Win rate", if (state.battleAttempts == 0) "—" else "$winRate%")
+                LedgerRow("Best battle", "${state.bestPushUpsInBattle} reps")
+                LedgerRow("Highest boss felled", state.highestBossDefeated?.name ?: "None yet")
             }
         }
 
-        item { WeeklyChart(days.map { it.label to it.pushUps }) }
+        item {
+            Column {
+                SectionHeader("Rhythm", meta = "$weekTotal this week")
+                Spacer(Modifier.height(18.dp))
+                if (days.all { it.pushUps == 0 }) {
+                    EmptyRhythm()
+                } else {
+                    WeeklyRepChart(days = days)
+                }
+            }
+        }
 
         item {
-            Text(
-                "WORKOUT HISTORY",
-                style = MaterialTheme.typography.labelSmall,
-                color = Muted,
-                modifier = Modifier.padding(top = 8.dp),
+            SectionHeader(
+                title = "Chronicle",
+                meta = if (state.history.isEmpty()) "empty" else "${state.history.size} fights",
             )
         }
 
         if (state.history.isEmpty()) {
-            item { EmptyStats() }
-        } else {
-            items(state.history, key = { it.battleId }) { record -> WorkoutRow(record) }
-        }
-    }
-}
-
-@Composable
-private fun StatBlock(label: String, value: String, modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier
-            .background(Charcoal, RoundedCornerShape(3.dp))
-            .border(1.dp, Line, RoundedCornerShape(3.dp))
-            .padding(16.dp),
-    ) {
-        Text(label, style = MaterialTheme.typography.labelSmall, color = Muted)
-        Spacer(Modifier.height(8.dp))
-        Text(value, style = MaterialTheme.typography.headlineMedium, color = Bone)
-    }
-}
-
-@Composable
-private fun WeeklyChart(days: List<Pair<String, Int>>) {
-    val max = (days.maxOfOrNull { it.second } ?: 0).coerceAtLeast(1)
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Charcoal, RoundedCornerShape(3.dp))
-            .border(1.dp, Line, RoundedCornerShape(3.dp))
-            .padding(18.dp),
-    ) {
-        Text("LAST 7 DAYS", style = MaterialTheme.typography.labelSmall, color = Muted)
-        Spacer(Modifier.height(16.dp))
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(104.dp),
-            verticalAlignment = Alignment.Bottom,
-        ) {
-            days.forEach { (label, reps) ->
+            item {
                 Column(
                     modifier = Modifier
-                        .weight(1f)
-                        .fillMaxHeight(),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Bottom,
+                        .fillMaxWidth()
+                        .background(Panel.copy(alpha = 0.55f), RoundedCornerShape(3.dp))
+                        .padding(20.dp),
                 ) {
+                    FitIcon(FitIcon.Chart, tint = Ember.copy(alpha = 0.8f), iconSize = 18.dp)
+                    Spacer(Modifier.height(12.dp))
                     Text(
-                        text = if (reps > 0) reps.toString() else "",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = Muted,
+                        "Nothing recorded yet.",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = Bone,
                     )
-                    Spacer(Modifier.height(5.dp))
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth(0.55f)
-                            .height((64f * reps / max).coerceAtLeast(2f).dp)
-                            .background(if (reps > 0) EmberRed else Steel),
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        "Reps, wins and bests appear here after your first battle.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = Fog,
                     )
-                    Spacer(Modifier.height(8.dp))
-                    Text(label, style = MaterialTheme.typography.labelSmall, color = Muted)
                 }
+            }
+        } else {
+            items(state.history, key = { it.battleId }) { record ->
+                WorkoutRow(record)
             }
         }
     }
 }
 
 @Composable
-private fun EmptyStats() {
-    Column(
+private fun LedgerRow(label: String, value: String) {
+    Column {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 15.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(label, style = MaterialTheme.typography.bodyMedium, color = Fog)
+            Text(value, style = MaterialTheme.typography.titleMedium, color = Bone)
+        }
+        HairlineRule(color = Hairline.copy(alpha = 0.55f))
+    }
+}
+
+@Composable
+private fun EmptyRhythm() {
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Charcoal, RoundedCornerShape(3.dp))
-            .border(1.dp, Line, RoundedCornerShape(3.dp))
-            .padding(20.dp),
+            .height(72.dp)
+            .background(Hairline.copy(alpha = 0.18f), RoundedCornerShape(3.dp)),
+        contentAlignment = Alignment.CenterStart,
     ) {
-        Text("Nothing recorded yet.", style = MaterialTheme.typography.bodyMedium, color = Bone)
-        Spacer(Modifier.height(4.dp))
         Text(
-            "Your reps, wins and bests appear here after your first battle.",
+            "No reps this week. The rhythm starts with one.",
             style = MaterialTheme.typography.bodySmall,
-            color = Muted,
+            color = FogDim,
+            modifier = Modifier.padding(horizontal = 16.dp),
         )
     }
 }
