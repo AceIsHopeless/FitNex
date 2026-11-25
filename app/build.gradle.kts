@@ -1,9 +1,23 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
     id("org.jetbrains.kotlin.plugin.serialization")
 }
+
+// Release signing uses the shared Android release key. Locally it is read from
+// keystore.properties (gitignored); in CI the same values come from env vars so
+// the keystore never has to live in the repository.
+val keystorePropertiesFile = rootProject.file("keystore.properties")
+val keystoreProperties = Properties()
+if (keystorePropertiesFile.exists()) {
+    FileInputStream(keystorePropertiesFile).use { keystoreProperties.load(it) }
+}
+val ciKeystorePath: String? = System.getenv("FITNEX_KEYSTORE_FILE")?.takeIf { it.isNotBlank() }
+val hasSigningKey = keystorePropertiesFile.exists() || ciKeystorePath != null
 
 android {
     namespace = "com.fitnex.app"
@@ -18,6 +32,24 @@ android {
         vectorDrawables { useSupportLibrary = true }
     }
 
+    signingConfigs {
+        if (hasSigningKey) {
+            create("release") {
+                if (keystorePropertiesFile.exists()) {
+                    storeFile = rootProject.file(keystoreProperties.getProperty("storeFile"))
+                    storePassword = keystoreProperties.getProperty("storePassword")
+                    keyAlias = keystoreProperties.getProperty("keyAlias")
+                    keyPassword = keystoreProperties.getProperty("keyPassword")
+                } else {
+                    storeFile = file(ciKeystorePath!!)
+                    storePassword = System.getenv("FITNEX_KEYSTORE_PASSWORD")
+                    keyAlias = System.getenv("FITNEX_KEY_ALIAS")
+                    keyPassword = System.getenv("FITNEX_KEY_PASSWORD")
+                }
+            }
+        }
+    }
+
     buildTypes {
         debug {
             isMinifyEnabled = false
@@ -28,6 +60,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
+            signingConfig = signingConfigs.findByName("release")
         }
     }
 

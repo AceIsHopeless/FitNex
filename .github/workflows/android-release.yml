@@ -14,6 +14,12 @@ jobs:
     name: Build FitNex APK
     runs-on: ubuntu-latest
 
+    env:
+      KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+      KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+      KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+      KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -30,22 +36,39 @@ jobs:
       - name: Run unit tests
         run: ./gradlew test --console=plain
 
-      - name: Build debug APK
-        run: ./gradlew assembleDebug --console=plain
+      - name: Build APK
+        run: |
+          set -euo pipefail
+          if [ -n "${KEYSTORE_BASE64:-}" ]; then
+            echo "Signing with the shared release keystore."
+            printf '%s' "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/fitnex-release.jks"
+            export FITNEX_KEYSTORE_FILE="$RUNNER_TEMP/fitnex-release.jks"
+            export FITNEX_KEYSTORE_PASSWORD="$KEYSTORE_PASSWORD"
+            export FITNEX_KEY_ALIAS="$KEY_ALIAS"
+            export FITNEX_KEY_PASSWORD="$KEY_PASSWORD"
+            ./gradlew assembleRelease --console=plain
+            SRC="app/build/outputs/apk/release/app-release.apk"
+          else
+            echo "::warning::No signing secrets configured - falling back to a debug-signed APK."
+            ./gradlew assembleDebug --console=plain
+            SRC="app/build/outputs/apk/debug/app-debug.apk"
+          fi
+          [ -f "$SRC" ] || { echo "APK not found at $SRC"; exit 1; }
+          echo "APK_SRC=$SRC" >> "$GITHUB_ENV"
 
       - name: Name the APK after the version
         id: version
         run: |
           set -euo pipefail
           VERSION="${GITHUB_REF_NAME#v}"
-          if [ -z "$VERSION" ] || [ "$VERSION" = "main" ]; then
-            VERSION="$(grep -oP 'versionName\s*=\s*"\K[^"]+' app/build.gradle.kts | head -n1)"
-          fi
+          case "$VERSION" in
+            ""|main|master) VERSION="$(grep -oP 'versionName\s*=\s*"\K[^"]+' app/build.gradle.kts | head -n1)" ;;
+          esac
           APK="FitNEX-${VERSION}.apk"
-          cp app/build/outputs/apk/debug/app-debug.apk "$APK"
+          cp "$APK_SRC" "$APK"
           echo "VERSION=$VERSION" >> "$GITHUB_ENV"
           echo "APK=$APK" >> "$GITHUB_ENV"
-          echo "Built $APK"
+          echo "Built $APK from $APK_SRC"
 
       - name: Extract release notes from CHANGELOG
         run: |
@@ -56,7 +79,7 @@ jobs:
             found { print }
           ' CHANGELOG.md > release_notes.md
           if [ ! -s release_notes.md ]; then
-            printf 'FitNex %s\n' "$VERSION" > release_notes.md
+            printf 'FitNEX %s\n' "$VERSION" > release_notes.md
           fi
           cat release_notes.md
 
