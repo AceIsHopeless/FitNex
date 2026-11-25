@@ -9,3 +9,7 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Release artifacts (attached to GitHub releases, not committed)
+/FitNEX-*.apk
+*.log
