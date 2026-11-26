@@ -12,6 +12,7 @@ import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -34,6 +35,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
@@ -49,8 +51,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.fitnex.app.ui.theme.Abyss
 import com.fitnex.app.ui.theme.Bone
 import com.fitnex.app.ui.theme.Ember
+import com.fitnex.app.ui.theme.EmberBright
 import com.fitnex.app.ui.theme.EmberDeep
 import com.fitnex.app.ui.theme.Fog
 import com.fitnex.app.ui.theme.FogDim
@@ -61,39 +65,44 @@ import com.fitnex.app.ui.theme.Panel
 
 /** Standard page gutter, shared by every scrollable screen. */
 object Metrics {
-    val Gutter = 22.dp
+    val Gutter = 20.dp
     val BottomBreathing = 132.dp
 }
 
 /**
- * Atmospheric ground: cold vertical wash plus one warm pool of light near the
- * top, like a torch off-frame. No loud gradients.
+ * Atmospheric ground: an ember pool of light behind the header and a cold teal
+ * counter-glow low on the page, the way a game lobby lights its hero panel.
  */
 @Composable
 fun Atmosphere(modifier: Modifier = Modifier, content: @Composable () -> Unit = {}) {
-    Box(modifier = modifier.fillMaxSize().background(Night)) {
-        Box(
-            Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.radialGradient(
-                        colors = listOf(Ember.copy(alpha = 0.16f), Color.Transparent),
-                        center = Offset(0f, 0f),
-                        radius = 1200f,
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(Night)
+            .drawBehind {
+                drawRect(
+                    brush = Brush.radialGradient(
+                        colors = listOf(Ember.copy(alpha = 0.30f), Color.Transparent),
+                        center = Offset(size.width * 0.18f, size.height * 0.01f),
+                        radius = size.minDimension * 1.15f,
                     ),
-                ),
-        )
-        Box(
-            Modifier
-                .fillMaxSize()
-                .background(
-                    Brush.verticalGradient(
+                )
+                drawRect(
+                    brush = Brush.radialGradient(
+                        colors = listOf(Abyss.copy(alpha = 0.55f), Color.Transparent),
+                        center = Offset(size.width * 1.02f, size.height * 0.82f),
+                        radius = size.minDimension * 1.05f,
+                    ),
+                )
+                drawRect(
+                    brush = Brush.verticalGradient(
                         0f to Color.Transparent,
-                        0.58f to Panel.copy(alpha = 0.30f),
-                        1f to Night,
+                        0.62f to Night.copy(alpha = 0.28f),
+                        1f to Night.copy(alpha = 0.85f),
                     ),
-                ),
-        )
+                )
+            },
+    ) {
         content()
     }
 }
@@ -121,27 +130,29 @@ fun SectionHeader(
         modifier = modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(title.uppercase(), style = MaterialTheme.typography.labelMedium, color = Fog)
-        Box(
-            Modifier
-                .padding(horizontal = 12.dp)
-                .weight(1f)
-                .height(1.dp)
-                .background(Hairline),
+        Text(
+            title,
+            style = MaterialTheme.typography.headlineSmall,
+            color = Bone,
+            maxLines = 1,
+            modifier = Modifier.weight(1f),
         )
         if (meta != null) {
+            Spacer(Modifier.width(10.dp))
             Text(meta.uppercase(), style = MaterialTheme.typography.labelSmall, color = metaColor)
         }
         if (onAction != null) {
-            Spacer(Modifier.width(14.dp))
-            Text(
-                actionLabel.uppercase(),
-                style = MaterialTheme.typography.labelSmall,
-                color = Ember,
+            Row(
                 modifier = Modifier
+                    .clip(RoundedCornerShape(50))
                     .clickable(onClick = onAction)
-                    .padding(vertical = 6.dp),
-            )
+                    .padding(start = 10.dp, top = 6.dp, bottom = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(actionLabel, style = MaterialTheme.typography.labelSmall, color = Ember)
+                Spacer(Modifier.width(2.dp))
+                FitIcon(FitIcon.ChevronRight, tint = Ember, iconSize = 12.dp)
+            }
         }
     }
 }
@@ -149,6 +160,28 @@ fun SectionHeader(
 @Composable
 fun HairlineRule(modifier: Modifier = Modifier, color: Color = Hairline) {
     Box(modifier.fillMaxWidth().height(1.dp).background(color))
+}
+
+/**
+ * Rounded panel used for every grouped block: a slightly lifted surface with a
+ * hairline rim and an optional warm bloom bleeding in from the top edge.
+ */
+@Composable
+fun GlassCard(
+    modifier: Modifier = Modifier,
+    corner: Dp = 22.dp,
+    glow: Color? = null,
+    content: @Composable ColumnScope.() -> Unit,
+) {
+    val shape = RoundedCornerShape(corner)
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .background(Panel.copy(alpha = 0.94f))
+            .border(1.dp, if (glow == null) Hairline else glow.copy(alpha = 0.30f), shape),
+        content = content,
+    )
 }
 
 @Composable
@@ -209,16 +242,20 @@ fun PrimaryAction(
                 scaleY = scale
                 alpha = if (enabled) 1f else 0.45f
             }
-            .clip(RoundedCornerShape(3.dp))
-            .background(Brush.horizontalGradient(listOf(Ember, EmberDeep)))
-            .border(1.dp, Bone.copy(alpha = 0.12f), RoundedCornerShape(3.dp)),
+            .clip(RoundedCornerShape(18.dp))
+            .background(
+                Brush.linearGradient(
+                    listOf(EmberBright, Ember, Color(0xFF8E2216)),
+                ),
+            )
+            .border(1.dp, Bone.copy(alpha = 0.18f), RoundedCornerShape(18.dp)),
     ) {
         Button(
             onClick = onClick,
             enabled = enabled,
             interactionSource = interaction,
             modifier = Modifier.fillMaxWidth().heightIn(min = 56.dp),
-            shape = RoundedCornerShape(3.dp),
+            shape = RoundedCornerShape(18.dp),
             colors = ButtonDefaults.buttonColors(
                 containerColor = Color.Transparent,
                 contentColor = Bone,
@@ -262,14 +299,14 @@ fun SecondaryAction(
         modifier = modifier
             .fillMaxWidth()
             .graphicsLayer { scaleX = scale; scaleY = scale }
-            .clip(RoundedCornerShape(3.dp))
-            .border(1.dp, Hairline, RoundedCornerShape(3.dp)),
+            .clip(RoundedCornerShape(18.dp))
+            .border(1.dp, Hairline, RoundedCornerShape(18.dp)),
     ) {
         Button(
             onClick = onClick,
             interactionSource = interaction,
             modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp),
-            shape = RoundedCornerShape(3.dp),
+            shape = RoundedCornerShape(18.dp),
             colors = ButtonDefaults.buttonColors(
                 containerColor = Color.Transparent,
                 contentColor = Bone,
@@ -303,16 +340,17 @@ fun Tag(
     color: Color = Ember,
     filled: Boolean = false,
 ) {
+    val shape = RoundedCornerShape(50)
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(2.dp))
-            .background(if (filled) color else color.copy(alpha = 0.10f))
-            .border(1.dp, color.copy(alpha = if (filled) 0.9f else 0.35f), RoundedCornerShape(2.dp))
-            .padding(horizontal = 8.dp, vertical = 4.dp),
+            .clip(shape)
+            .background(if (filled) color else color.copy(alpha = 0.12f))
+            .border(1.dp, color.copy(alpha = if (filled) 0.9f else 0.30f), shape)
+            .padding(horizontal = 10.dp, vertical = 5.dp),
     ) {
         Text(
             text.uppercase(),
-            style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.6.sp),
+            style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 1.3.sp),
             color = if (filled) Night else color,
         )
     }

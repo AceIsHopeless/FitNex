@@ -136,7 +136,7 @@ fun StatsScreen(state: PlayerState) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(Panel.copy(alpha = 0.55f), RoundedCornerShape(3.dp))
+                        .background(Panel.copy(alpha = 0.85f), RoundedCornerShape(20.dp))
                         .padding(20.dp),
                 ) {
                     FitIcon(FitIcon.Chart, tint = Ember.copy(alpha = 0.8f), iconSize = 18.dp)
@@ -185,7 +185,7 @@ private fun EmptyRhythm() {
         modifier = Modifier
             .fillMaxWidth()
             .height(72.dp)
-            .background(Hairline.copy(alpha = 0.18f), RoundedCornerShape(3.dp)),
+            .background(Hairline.copy(alpha = 0.18f), RoundedCornerShape(18.dp)),
         contentAlignment = Alignment.CenterStart,
     ) {
         Text(

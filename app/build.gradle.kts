@@ -27,9 +27,8 @@ android {
         applicationId = "com.fitnex.app"
         minSdk = 26
         targetSdk = 36
-        versionCode = 2
-        versionName = "1.1"
-        vectorDrawables { useSupportLibrary = true }
+        versionCode = 3
+        versionName = "1.5"
     }
 
     signingConfigs {
@@ -55,8 +54,8 @@ android {
             isMinifyEnabled = false
         }
         release {
-            // Ship only what a phone can run: MediaPipe's x86/x86_64 native
-            // libraries are emulator-only and cost ~27 MB of the APK.
+            // One universal APK for both ARM CPUs; x86/x86_64 stay out because
+            // those pose-detection natives are emulator-only (~27 MB).
             ndk {
                 abiFilters += listOf("arm64-v8a", "armeabi-v7a")
             }
@@ -82,6 +81,11 @@ android {
     packaging {
         resources {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
+            // Build-time only: Kotlin metadata, coroutine debug probes and
+            // licence stubs are never read by the running app.
+            excludes += "DebugProbesKt.bin"
+            excludes += "kotlin-tooling-metadata.json"
+            excludes += "/META-INF/*.version"
         }
     }
 }
@@ -104,17 +108,16 @@ dependencies {
     implementation(composeBom)
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")
-    implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.foundation:foundation")
     implementation("androidx.compose.material3:material3")
-    debugImplementation("androidx.compose.ui:ui-tooling")
 
     implementation("androidx.camera:camera-core:1.4.2")
     implementation("androidx.camera:camera-camera2:1.4.2")
     implementation("androidx.camera:camera-lifecycle:1.4.2")
     implementation("androidx.camera:camera-view:1.4.2")
 
-    implementation("com.google.mediapipe:tasks-vision:0.10.33")
+    implementation("com.google.mlkit:pose-detection:18.0.0-beta5")
+    implementation("com.google.mlkit:pose-detection-accurate:18.0.0-beta5")
 
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0")
     implementation("androidx.datastore:datastore-preferences:1.1.7")

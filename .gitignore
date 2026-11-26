@@ -10,7 +10,8 @@
 .cxx
 local.properties
 
-# Release artifacts (attached to GitHub releases, not committed)
+# Release artifacts (archived in apk/, attached to GitHub releases, not committed)
+/apk/*.apk
 /FitNEX-*.apk
 *.log
 

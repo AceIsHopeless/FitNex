@@ -66,9 +66,9 @@ jobs:
           esac
           APK="FitNEX-${VERSION}.apk"
           cp "$APK_SRC" "$APK"
+          echo "Built $APK from $APK_SRC"
           echo "VERSION=$VERSION" >> "$GITHUB_ENV"
           echo "APK=$APK" >> "$GITHUB_ENV"
-          echo "Built $APK from $APK_SRC"
 
       - name: Extract release notes from CHANGELOG
         run: |

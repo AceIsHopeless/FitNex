@@ -1,15 +1,5 @@
-# MediaPipe Tasks loads its graph and native bridge reflectively from the AAR.
--keep class com.google.mediapipe.** { *; }
--keep class com.google.protobuf.** { *; }
-
-# MediaPipe logs through FluentLogger, whose caller finder walks the stack and
-# ignores its own frames by class name. Renaming or inlining those frames makes
-# the lookup throw during MediaPipe's static initialisers.
--keep class com.google.common.flogger.** { *; }
-
-# Optional profiler protos referenced by MediaPipe but not shipped in the AAR.
--dontwarn com.google.mediapipe.proto.CalculatorProfileProto$CalculatorProfile
--dontwarn com.google.mediapipe.proto.GraphTemplateProto$CalculatorGraphTemplate
+# ML Kit pose detection ships its own consumer ProGuard rules; nothing extra
+# is required here for R8.
 
 # kotlinx.serialization: keep the generated serializers for saved game state.
 -keepattributes *Annotation*, InnerClasses, Signature

@@ -33,7 +33,7 @@ fun BossArt(
     bossId: String,
     modifier: Modifier = Modifier,
     height: Dp = 200.dp,
-    cornerRadius: Dp = 3.dp,
+    cornerRadius: Dp = 22.dp,
     dim: Float = 0f,
     showScrim: Boolean = true,
 ) {

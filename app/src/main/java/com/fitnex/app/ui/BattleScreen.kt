@@ -397,11 +397,11 @@ private fun TrackingStrip(livePose: LivePoseState) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(3.dp))
+            .background(Color.Black.copy(alpha = 0.5f), RoundedCornerShape(16.dp))
             .border(
                 1.dp,
                 if (livePose.tracked) Ember.copy(alpha = 0.35f) else Hairline,
-                RoundedCornerShape(3.dp),
+                RoundedCornerShape(16.dp),
             )
             .padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -591,8 +591,8 @@ private fun TimeUpDialog(
         Column(
             Modifier
                 .fillMaxWidth()
-                .background(Panel, RoundedCornerShape(4.dp))
-                .border(1.dp, Hairline, RoundedCornerShape(4.dp))
+                .background(Panel, RoundedCornerShape(24.dp))
+                .border(1.dp, Hairline, RoundedCornerShape(24.dp))
                 .padding(24.dp),
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {

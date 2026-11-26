@@ -1,113 +1,100 @@
 package com.fitnex.app.camera
 
 import android.content.Context
-import android.graphics.Bitmap
+import android.os.SystemClock
 import android.util.Log
-import com.fitnex.app.domain.PoseMath
+import androidx.camera.core.ExperimentalGetImage
+import androidx.camera.core.ImageProxy
 import com.fitnex.app.domain.PosePoint
 import com.fitnex.app.domain.PushUpPose
-import com.google.mediapipe.framework.image.BitmapImageBuilder
-import com.google.mediapipe.tasks.core.BaseOptions
-import com.google.mediapipe.tasks.core.Delegate
-import com.google.mediapipe.tasks.vision.core.RunningMode
-import com.google.mediapipe.tasks.vision.poselandmarker.PoseLandmarker
-import com.google.mediapipe.tasks.vision.poselandmarker.PoseLandmarkerResult
+import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.pose.Pose
+import com.google.mlkit.vision.pose.PoseDetection
+import com.google.mlkit.vision.pose.PoseLandmark
+import com.google.mlkit.vision.pose.accurate.AccuratePoseDetectorOptions
 import java.io.Closeable
 
 /**
- * Wraps the MediaPipe pose landmarker.
+ * Wraps ML Kit's accurate pose detector.
  *
- * Results arrive on a MediaPipe worker thread; callers must marshal to the
- * thread they need. [onPose] receives null when no usable body was found, which
- * lets the rep counter discard a half-finished repetition.
+ * The accurate model handles athletes lying close to the floor much better
+ * than the lite model, which is where rep tracking used to fall apart.
+ *
+ * ML Kit delivers results on the main thread. [onPose] receives null when no
+ * usable body was found, which lets the rep counter discard a half-finished
+ * repetition. The analyzer's [ImageProxy] is closed as soon as ML Kit finishes
+ * with it, or CameraX stops delivering frames.
  */
 class PoseDetector(
     context: Context,
     private val onPose: (PushUpPose?, Long) -> Unit,
 ) : Closeable {
 
-    private var landmarker: PoseLandmarker? = null
+    private val detector = PoseDetection.getClient(
+        AccuratePoseDetectorOptions.Builder()
+            .setDetectorMode(AccuratePoseDetectorOptions.STREAM_MODE)
+            .build(),
+    )
 
-    init {
-        val baseOptions = BaseOptions.builder()
-            .setModelAssetPath(MODEL_ASSET)
-            .setDelegate(Delegate.CPU)
-            .build()
+    @Volatile
+    private var closed = false
 
-        val options = PoseLandmarker.PoseLandmarkerOptions.builder()
-            .setBaseOptions(baseOptions)
-            .setRunningMode(RunningMode.LIVE_STREAM)
-            .setNumPoses(1)
-            .setMinPoseDetectionConfidence(0.5f)
-            .setMinPosePresenceConfidence(0.5f)
-            .setMinTrackingConfidence(0.5f)
-            .setResultListener { result, _ ->
-                onPose(toPushUpPose(result), result.timestampMs())
-            }
-            .setErrorListener { error ->
-                Log.e(TAG, "Pose landmarker error: ${error.message}", error)
-            }
-            .build()
+    @androidx.annotation.OptIn(ExperimentalGetImage::class)
+    fun detect(image: ImageProxy) {
+        if (closed) {
+            image.close()
+            return
+        }
 
-        landmarker = PoseLandmarker.createFromOptions(context, options)
-    }
+        val mediaImage = image.image
+        if (mediaImage == null) {
+            image.close()
+            return
+        }
 
-    fun detect(bitmap: Bitmap, timestampMs: Long) {
-        val detector = landmarker ?: return
-        runCatching { detector.detectAsync(BitmapImageBuilder(bitmap).build(), timestampMs) }
-            .onFailure { Log.w(TAG, "Frame skipped: ${it.message}") }
+        val timestampMs = SystemClock.elapsedRealtime()
+        try {
+            val input = InputImage.fromMediaImage(mediaImage, image.imageInfo.rotationDegrees)
+            detector.process(input)
+                .addOnSuccessListener { pose -> onPose(pose.toPushUpPose(), timestampMs) }
+                .addOnFailureListener { error ->
+                    Log.w(TAG, "Pose frame skipped: ${error.message}")
+                    onPose(null, timestampMs)
+                }
+                .addOnCompleteListener {
+                    image.close() // always close, or CameraX stops delivering frames
+                }
+        } catch (throwable: Throwable) {
+            Log.w(TAG, "Dropping frame: ${throwable.message}")
+            image.close()
+        }
     }
 
     override fun close() {
-        runCatching { landmarker?.close() }
-        landmarker = null
+        closed = true
+        runCatching { detector.close() }
     }
 
-    private fun toPushUpPose(result: PoseLandmarkerResult): PushUpPose? {
-        val landmarks = result.landmarks().firstOrNull() ?: return null
+    private fun Pose.toPushUpPose(): PushUpPose = PushUpPose(
+        leftShoulder = landmark(PoseLandmark.LEFT_SHOULDER),
+        leftElbow = landmark(PoseLandmark.LEFT_ELBOW),
+        leftWrist = landmark(PoseLandmark.LEFT_WRIST),
+        leftHip = landmark(PoseLandmark.LEFT_HIP),
+        rightShoulder = landmark(PoseLandmark.RIGHT_SHOULDER),
+        rightElbow = landmark(PoseLandmark.RIGHT_ELBOW),
+        rightWrist = landmark(PoseLandmark.RIGHT_WRIST),
+        rightHip = landmark(PoseLandmark.RIGHT_HIP),
+    )
 
-        fun point(index: Int): PosePoint? {
-            val landmark = landmarks.getOrNull(index) ?: return null
-            val visibility = landmark.visibility().orElse(0f)
-            if (visibility < MIN_VISIBILITY) return null
-            return PosePoint(landmark.x(), landmark.y(), visibility)
-        }
-
-        val leftShoulder = point(LEFT_SHOULDER)
-        val leftElbow = point(LEFT_ELBOW)
-        val leftWrist = point(LEFT_WRIST)
-        val rightShoulder = point(RIGHT_SHOULDER)
-        val rightElbow = point(RIGHT_ELBOW)
-        val rightWrist = point(RIGHT_WRIST)
-
-        val leftAngle = if (leftShoulder != null && leftElbow != null && leftWrist != null) {
-            PoseMath.angleAt(leftShoulder, leftElbow, leftWrist).takeIf { !it.isNaN() }
-        } else {
-            null
-        }
-        val rightAngle = if (rightShoulder != null && rightElbow != null && rightWrist != null) {
-            PoseMath.angleAt(rightShoulder, rightElbow, rightWrist).takeIf { !it.isNaN() }
-        } else {
-            null
-        }
-
-        val shoulders = listOfNotNull(leftShoulder?.y, rightShoulder?.y)
-        val shoulderY = if (shoulders.isEmpty()) null else shoulders.average().toFloat()
-
-        if (leftAngle == null && rightAngle == null) return null
-        return PushUpPose(leftAngle, rightAngle, shoulderY)
+    private fun Pose.landmark(type: Int): PosePoint? {
+        val landmark = getPoseLandmark(type) ?: return null
+        if (landmark.inFrameLikelihood < MIN_LIKELIHOOD) return null
+        val position = landmark.position
+        return PosePoint(position.x, position.y, landmark.inFrameLikelihood)
     }
 
     private companion object {
         const val TAG = "FitNexPose"
-        const val MODEL_ASSET = "pose_landmarker_lite.task"
-        const val MIN_VISIBILITY = 0.4f
-
-        const val LEFT_SHOULDER = 11
-        const val RIGHT_SHOULDER = 12
-        const val LEFT_ELBOW = 13
-        const val RIGHT_ELBOW = 14
-        const val LEFT_WRIST = 15
-        const val RIGHT_WRIST = 16
+        const val MIN_LIKELIHOOD = 0.5f
     }
 }

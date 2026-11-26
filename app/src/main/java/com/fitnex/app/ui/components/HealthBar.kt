@@ -9,9 +9,11 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
@@ -48,12 +50,14 @@ fun HealthBar(
                 Modifier
                     .weight(1f)
                     .fillMaxHeight()
+                    .clip(RoundedCornerShape(3.dp))
                     .background(Hairline.copy(alpha = 0.55f)),
             ) {
                 Box(
                     Modifier
                         .fillMaxHeight()
                         .fillMaxWidth(segmentFill)
+                        .clip(RoundedCornerShape(3.dp))
                         .background(
                             Brush.verticalGradient(listOf(accent, EmberDeep)),
                         ),

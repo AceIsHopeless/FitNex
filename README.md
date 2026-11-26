@@ -5,8 +5,8 @@ clean rep damages the boss in front of you, and the reps you actually do level
 your hero up.
 
 FitNex is a native Android app written in Kotlin with Jetpack Compose. Push-ups
-are detected on-device with MediaPipe pose tracking — no video, frames or
-workout data are ever uploaded anywhere.
+are detected on-device with ML Kit's accurate pose detector — no video, frames
+or workout data are ever uploaded anywhere.
 
 ## Download
 
@@ -14,11 +14,13 @@ Grab the newest APK from the [Releases page](https://github.com/AceIsHopeless/Fi
 
 | Release | APK |
 | --- | --- |
+| FitNEX 1.5 | `FitNEX-1.5.apk` |
 | FitNEX 1.1 | `FitNEX-1.1.apk` |
 | FitNEX 1.0 | `FitNEX-1.0.apk` |
 
 Every version gets its own release and its own APK file named after the version,
-so older builds stay downloadable when the app moves on.
+so older builds stay downloadable when the app moves on. Local builds are also
+archived in the `apk/` folder as `apk/FitNEX-<version>.apk`.
 
 To install: download the `.apk` on your phone and open it. Android will ask you
 to allow installs from your browser/file manager the first time — FitNex is
@@ -26,7 +28,7 @@ sideloaded, not distributed through Google Play.
 
 ## Features
 
-- **Real push-up detection.** CameraX plus the MediaPipe pose landmarker track
+- **Real push-up detection.** CameraX and ML Kit's accurate pose detector track
   your shoulders, elbows and wrists in real time and draw a live skeleton over
   the camera feed.
 - **Rep counting that respects form.** An elbow-angle state machine ignores
@@ -63,7 +65,8 @@ sideloaded, not distributed through Google Play.
 
 ## Requirements
 
-- Android 8.0 (API 26) or newer.
+- Android 8.0 (API 26) or newer on a 32-bit or 64-bit ARM device — one APK
+  covers both.
 - A working camera. A front camera is recommended but not required.
 - No internet permission is requested, so the app works fully offline.
 
@@ -89,15 +92,16 @@ it to a GitHub release named `FitNEX 1.0` with the matching
 1. Bump `versionCode` and `versionName` in `app/build.gradle.kts`.
 2. Move the `Unreleased` items in [CHANGELOG.md](CHANGELOG.md) into a new
    `## [X.Y]` section.
-3. Commit, then tag and push:
+3. Build `./gradlew assembleRelease` and copy the APK to `apk/FitNEX-X.Y.apk`.
+4. Commit, then tag and push:
 
    ```bash
-   git tag v1.1
+   git tag v1.5
    git push origin main --tags
    ```
 
-GitHub Actions builds it and publishes `FitNEX-1.1.apk` on a release titled
-`FitNEX 1.1`. Each version is a separate release, so previous APKs remain
+GitHub Actions builds it and publishes `FitNEX-1.5.apk` on a release titled
+`FitNEX 1.5`. Each version is a separate release, so previous APKs remain
 available.
 
 ## Tech stack
@@ -107,16 +111,16 @@ available.
 | Language | Kotlin 2.2.20 |
 | UI | Jetpack Compose (Material 3), Compose BOM 2025.05.01 |
 | Camera | CameraX 1.4.2 |
-| Pose detection | MediaPipe Tasks Vision 0.10.33 (`pose_landmarker_lite.task`) |
+| Pose detection | ML Kit Pose Detection 18.0.0-beta5 (`pose-detection-accurate`, model bundled in the APK) |
 | Persistence | DataStore Preferences + kotlinx-serialization-json |
-| Build | AGP 8.13.0, Gradle 8.14.3, minSdk 26, compile/targetSdk 36 |
+| Build | AGP 8.13.0, Gradle 8.14.3, minSdk 26, compile/targetSdk 36 (release: universal 32/64-bit ARM APK) |
 
 ## Project structure
 
 ```text
 app/src/main/java/com/fitnex/app/
 ├── MainActivity.kt              app entry point
-├── camera/                      CameraX + MediaPipe: pose detection, rep analysis
+├── camera/                      CameraX + ML Kit: pose detection, rep analysis
 ├── data/                        GameRepository, SettingsRepository (DataStore)
 ├── domain/                      Battle, Boss, PlayerState, PushUpCounter,
 │                                PoseMath, Rank, Stats, Title — pure Kotlin

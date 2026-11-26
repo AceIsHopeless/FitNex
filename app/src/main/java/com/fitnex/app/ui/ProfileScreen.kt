@@ -36,6 +36,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -252,8 +253,8 @@ fun ProfileScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(RoundedCornerShape(3.dp))
-                        .border(1.dp, Ember.copy(alpha = 0.28f), RoundedCornerShape(3.dp))
+                        .clip(RoundedCornerShape(16.dp))
+                        .border(1.dp, Ember.copy(alpha = 0.28f), RoundedCornerShape(16.dp))
                         .clickable { showResetDialog = true }
                         .padding(horizontal = 16.dp, vertical = 15.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -374,17 +375,25 @@ private fun CameraSelector(settings: GameSettings, onSelect: (CameraFacing) -> U
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(3.dp))
-            .border(1.dp, Hairline, RoundedCornerShape(3.dp)),
+            .clip(RoundedCornerShape(50))
+            .background(Panel.copy(alpha = 0.9f))
+            .border(1.dp, Hairline, RoundedCornerShape(50))
+            .padding(4.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
         CameraFacing.entries.forEach { facing ->
             val active = settings.cameraFacing == facing
             Box(
                 modifier = Modifier
                     .weight(1f)
+                    .clip(RoundedCornerShape(50))
+                    .background(
+                        if (active) Brush.linearGradient(listOf(EmberBright, Ember)) else Brush.linearGradient(
+                            listOf(Color.Transparent, Color.Transparent),
+                        ),
+                    )
                     .clickable { onSelect(facing) }
-                    .background(if (active) Ember.copy(alpha = 0.16f) else Color.Transparent)
-                    .padding(vertical = 13.dp),
+                    .padding(vertical = 10.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
@@ -458,7 +467,7 @@ private fun ResetDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
         containerColor = Panel,
-        shape = RoundedCornerShape(4.dp),
+        shape = RoundedCornerShape(24.dp),
         title = {
             Column {
                 Eyebrow("Point of no return", color = Ember)
@@ -484,7 +493,7 @@ private fun ResetDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
                     singleLine = true,
                     textStyle = MaterialTheme.typography.bodyMedium,
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(3.dp),
+                    shape = RoundedCornerShape(14.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = Ember,
                         unfocusedBorderColor = Hairline,

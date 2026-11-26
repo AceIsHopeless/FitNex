@@ -4,7 +4,27 @@ All notable changes to FitNex are documented here.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.5] - 2026-11-26
+
+### Changed
+
+- The download is slimmer and runs on both 32-bit and 64-bit ARM phones from a
+  single APK: the redundant Compose tooling and legacy vector drawable support
+  (and the AppCompat stack it pulled in) are gone, and the header mark was
+  resized to the size it is actually drawn at.
+- New artwork: the launcher icon (adaptive on Android 8+) and the in-app wordmark
+  now use the supplied FitNex logo, and the five boss portraits were replaced
+  with the supplied Slime, Zombie, Skeleton, Vampire and Dark Knight art.
+- Push-up tracking rebuilt on ML Kit's accurate on-device pose model: the
+  counter now detects whether you are side-on or facing the camera and uses
+  elbow angle in side view or shoulder-to-wrist depth in front view, so reps
+  register from either setup. The bundled MediaPipe model is gone, keeping the
+  download lean.
+- Interface restyled as a game lobby: an ember-lit greeting header with a
+  lifetime-rep pill and rank rail, a rounded house-rules row, a full-bleed hunt
+  card, a two-column campaign grid of boss cards, rounded stat and momentum
+  panels, and a floating dock whose active tab is a filled ember pill. Every
+  screen inherits the rounded geometry, heavier sans headlines and glow palette.
 
 ## [1.1] - 2026-11-25
 

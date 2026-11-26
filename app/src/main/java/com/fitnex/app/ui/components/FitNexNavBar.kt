@@ -1,8 +1,6 @@
 package com.fitnex.app.ui.components
 
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -24,8 +22,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.fitnex.app.ui.theme.Bone
@@ -42,27 +40,31 @@ enum class FitNexTab(val label: String, val icon: FitIcon) {
     PROFILE("Hero", FitIcon.Helm),
 }
 
-/** Floating dock: one quiet slab above the page, ember only on the active tab. */
+/**
+ * Floating dock: one rounded slab above the page, and the active tab is a filled
+ * ember pill that carries its own label — the game-lobby tab treatment.
+ */
 @Composable
 fun FitNexDock(
     current: FitNexTab,
     onSelect: (FitNexTab) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val dockShape = RoundedCornerShape(26.dp)
     Box(
         modifier = modifier
             .fillMaxWidth()
             .navigationBarsPadding()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = 14.dp, vertical = 10.dp),
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(16.dp))
+                .clip(dockShape)
                 .background(Panel.copy(alpha = 0.97f))
-                .border(1.dp, Hairline, RoundedCornerShape(16.dp))
-                .padding(5.dp),
-            horizontalArrangement = Arrangement.spacedBy(2.dp),
+                .border(1.dp, Hairline, dockShape)
+                .padding(6.dp),
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             FitNexTab.entries.forEach { tab ->
                 DockItem(
@@ -83,43 +85,35 @@ private fun DockItem(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val shape = RoundedCornerShape(20.dp)
     val tint by animateColorAsState(
-        targetValue = if (selected) EmberBright else FogDim,
-        animationSpec = tween(220),
-        label = "dockTint",
-    )
-    val labelColor by animateColorAsState(
         targetValue = if (selected) Bone else FogDim,
-        animationSpec = tween(220),
-        label = "dockLabel",
-    )
-    val scale by animateFloatAsState(
-        targetValue = if (selected) 1f else 0.94f,
-        animationSpec = spring(dampingRatio = 0.6f, stiffness = 700f),
-        label = "dockScale",
+        animationSpec = tween(200),
+        label = "dockTint",
     )
     Column(
         modifier = modifier
-            .clip(RoundedCornerShape(12.dp))
-            .background(if (selected) Ember.copy(alpha = 0.13f) else Color.Transparent)
+            .clip(shape)
+            .background(
+                if (selected) {
+                    Brush.linearGradient(listOf(EmberBright, Ember))
+                } else {
+                    Brush.linearGradient(listOf(Color.Transparent, Color.Transparent))
+                },
+            )
             .clickable(onClick = onClick)
             .padding(vertical = 9.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        FitIcon(
-            icon = tab.icon,
-            tint = tint,
-            iconSize = 20.dp,
-            modifier = Modifier.graphicsLayer { scaleX = scale; scaleY = scale },
-        )
+        FitIcon(icon = tab.icon, tint = tint, iconSize = 19.dp)
         Spacer(Modifier.height(5.dp))
         Text(
             text = tab.label.uppercase(),
             style = MaterialTheme.typography.labelSmall.copy(
-                fontSize = 8.sp,
-                letterSpacing = 1.1.sp,
+                fontSize = 8.5.sp,
+                letterSpacing = 0.8.sp,
             ),
-            color = labelColor,
+            color = tint,
         )
     }
 }

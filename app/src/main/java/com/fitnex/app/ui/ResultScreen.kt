@@ -202,8 +202,8 @@ fun ResultScreen(
                         Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .background(Panel, RoundedCornerShape(3.dp))
-                                .border(1.dp, Gold.copy(alpha = 0.35f), RoundedCornerShape(3.dp))
+                                .background(Panel, RoundedCornerShape(20.dp))
+                                .border(1.dp, Gold.copy(alpha = 0.35f), RoundedCornerShape(20.dp))
                                 .padding(18.dp),
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {

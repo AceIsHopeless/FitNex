@@ -74,7 +74,7 @@ fun WeeklyRepChart(
                     Modifier
                         .fillMaxWidth()
                         .height(area)
-                        .clip(RoundedCornerShape(2.dp))
+                        .clip(RoundedCornerShape(6.dp))
                         .background(Hairline.copy(alpha = 0.25f)),
                     contentAlignment = Alignment.BottomCenter,
                 ) {
@@ -82,7 +82,7 @@ fun WeeklyRepChart(
                         Modifier
                             .fillMaxWidth()
                             .height(barHeight)
-                            .clip(RoundedCornerShape(2.dp))
+                            .clip(RoundedCornerShape(6.dp))
                             .background(
                                 if (day.pushUps > 0) {
                                     Brush.verticalGradient(
